@@ -27,7 +27,7 @@ namespace Freetime_Planner
         static VkApi vkapi;
         private static string _access_token = "e4df2dbee9e47576aa281af2718f2946d02ce327dd080e9d154a9f2e4b5fb95dff6dae77ab915a6c69191";
         static long userID = 0;
-        public Bot()
+        public Bot()  
         {
             Init();
         }
