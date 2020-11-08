@@ -21,6 +21,7 @@ namespace Freetime_Planner
             }
             WriteLine("Нажмите ENTER чтобы выйти...");
             ReadLine();
+
         }
     }
 }
