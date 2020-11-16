@@ -141,8 +141,7 @@ namespace Freetime_Planner
                     UserId = user.ID,
                     Message = message,
                     RandomId = DateTime.Now.Millisecond,
-                    Keyboard = keyboard,
-                    Template = 
+                    Keyboard = keyboard
                 });
                 WritelnColor($"Успешно отправлен ответ: {message}", ConsoleColor.DarkBlue);
                 Console.Beep();
