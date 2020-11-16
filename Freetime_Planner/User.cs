@@ -77,6 +77,12 @@ namespace Freetime_Planner
         public Mode CurrentLevel() => Level.Last.Value;
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public Mode PreviousLevel() => Level.Last.Previous.Value;
+
+        /// <summary>
         /// Устанавливает первый уровень по умолчанию Default
         /// </summary>
         public void ResetLevel()

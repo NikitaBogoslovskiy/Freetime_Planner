@@ -42,15 +42,21 @@ namespace Freetime_Planner
         /// </summary>
         /// <param name="sender"></param>
         /// <returns></returns>
-        public static User GetUser(VkNet.Model.User sender)
+        public static User GetUser(VkNet.Model.User sender, ref bool IsNew)
         {
             if (Users_Dict.Select(user => user.Key).Contains(sender.Id))
+            {
+                IsNew = false;
                 return Users_Dict[sender.Id];
+            }
             else
             {
+                IsNew = true;
                 var new_user = new User(sender.FirstName, sender.LastName, sender.Id);
                 Users_Dict.Add(sender.Id, new_user);
                 Unload();
+                Bot.keyboard = Keyboard.MainMenu();
+                Bot.SendMessage("Салам Алейкум");
                 return new_user;
             }
         }

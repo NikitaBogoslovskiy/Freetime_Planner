@@ -21,6 +21,9 @@ using Newtonsoft.Json;
 using VkNet.Model.Keyboard;
 
 using static Freetime_Planner.Modes;
+using VkNet.Model.Template;
+using VkNet.Enums.SafetyEnums;
+
 
 namespace Freetime_Planner
 {
@@ -59,6 +62,11 @@ namespace Freetime_Planner
         /// Поле, хранящее клавиатуру для отправки в диалог с текущим пользователем
         /// </summary>
         public static MessageKeyboard keyboard;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public static MessageTemplate template;
 
         //Функции региона MainArea
 
@@ -141,7 +149,8 @@ namespace Freetime_Planner
                     UserId = user.ID,
                     Message = message,
                     RandomId = DateTime.Now.Millisecond,
-                    Keyboard = keyboard
+                    Keyboard = keyboard,
+                    Template = template
                 });
                 WritelnColor($"Успешно отправлен ответ: {message}", ConsoleColor.DarkBlue);
                 Console.Beep();
@@ -286,9 +295,12 @@ namespace Freetime_Planner
                 {
                     message = messages[i];
                     VkNet.Model.User Sender = vkapi.Users.Get(new long[] { messages[i].PeerId.Value })[0];
-                    user = Users.GetUser(Sender);
+                    bool IsNew = false;
+                    user = Users.GetUser(Sender, ref IsNew);
                     WritelnColor($"Новое сообщение от пользователя {Sender.FirstName} {Sender.LastName}: {messages[i].Text}", ConsoleColor.Blue);
                     Console.Beep();
+                    if (IsNew)
+                        return; 
                     CommandCentre();
                 }
             }
@@ -326,33 +338,73 @@ namespace Freetime_Planner
             switch (user.Level.Count)
             {
                 case 1:
-                    user.AddLevel(ConvertIntoMode(message));
+                    try 
+                    {
+                        user.AddLevel(ConvertIntoMode(message.Text));
+                    }
+                    catch (ArgumentException e)
+                    {
+                        SendMessage(e.Message);
+                        break;
+                    }
                     if (user.CurrentLevel() == Mode.Film)
-                        SendMessage("<клавиатура с кнопками 'Поиск по названию', 'Жанры', 'Мои рекомендации', 'Планирую посмотреть', 'Рандомный фильм', 'Саундтрек фильма', 'Назад'>");
+                    {
+                        keyboard = ;
+                        SendMessage("Выберите режим обзора фильма");
+                    }
                     if (user.CurrentLevel() == Mode.TV)
-                        SendMessage("<клавиатура с кнопками 'Поиск по названию', 'Жанры', 'Мои рекомендации', 'Планирую посмотреть', 'Рандомный сериал', 'Саундтрек сериала', 'Назад'>");
+                    { 
+                        keyboard = ;
+                    SendMessage("Выберите режим обзора сериала");
+                    }
+
                     if (user.CurrentLevel() == Mode.Food)
-                        SendMessage("<информация о рандомном блюде>");
+                    {
+                        keyboard = ;
+                        SendMessage("Выберите еду под просмотр");
+                    }
                     break;
                 case 2:
                     var previous_level = user.CurrentLevel();
-                    var current_level = ConvertIntoMode(message);
+                    try
+                    {
+                        user.AddLevel(ConvertIntoMode(message.Text));
+                    }
+                    catch (ArgumentException e)
+                    {
+                        SendMessage(e.Message);
+                        break;
+                    }
                     if (previous_level == Mode.Film)
                     {
-                        if (current_level == Mode.Random)
-                        SendMessage("<информация о рандомном фильме>");
+                        Film.Menu();
                     }
                     if (previous_level == Mode.TV)
                     {
-                        if (current_level == Mode.Random)
-                            SendMessage("<информация о рандомном сериале>");
+                        TV.Menu();
                     }
-                    if (current_level == Mode.Back)
-                        user.RemoveLevel();
+                    if (previous_level == Mode.Food)
+                    {
+                        Food.Menu();
+                    }
                     break;
-                default:
-                    SendMessage("Bot is being developed");
+
+                case 3:
+                      previous_level = user.PreviousLevel();
+                    if (previous_level == Mode.Film)
+                    {
+                        Film.ButtonClicked();
+                    }
+                    if (previous_level == Mode.TV)
+                    {
+                        TV.ButtonClicked();
+                    }
+
                     break;
+
+                default:                                                    
+                    break;  //доделать дефолт
+
             }
         }
         #endregion

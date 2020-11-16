@@ -22,7 +22,7 @@ namespace Freetime_Planner
                 case "Закуски": return Mode.Snack;
                 case "Коктейли": return Mode.Cocktails;
                 case "Назад": return Mode.Back;
-                default: return Mode.Default;
+                default: throw new ArgumentException("Не выбрана ни одна из данных команд. Выберите кнопку из меню");
             }
         }
     }
