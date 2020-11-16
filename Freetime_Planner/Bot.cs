@@ -19,6 +19,7 @@ using static System.Console;
 using VkNet.Utils;
 using Newtonsoft.Json;
 using VkNet.Model.Keyboard;
+
 using static Freetime_Planner.Modes;
 
 namespace Freetime_Planner
@@ -140,7 +141,8 @@ namespace Freetime_Planner
                     UserId = user.ID,
                     Message = message,
                     RandomId = DateTime.Now.Millisecond,
-                    Keyboard = keyboard
+                    Keyboard = keyboard,
+                    Template = 
                 });
                 WritelnColor($"Успешно отправлен ответ: {message}", ConsoleColor.DarkBlue);
                 Console.Beep();
