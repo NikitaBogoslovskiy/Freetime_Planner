@@ -14,7 +14,9 @@ namespace Freetime_Planner
                 {
                     switch (ReadLine().ToLower())
                     {
-                        case "exit": Environment.Exit(0); break;
+                        case "exit":
+                            Bot.ExitActions();
+                            Environment.Exit(0); break;
                         default: break;
                     }
                 }

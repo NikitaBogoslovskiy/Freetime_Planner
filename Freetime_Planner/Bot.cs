@@ -18,25 +18,74 @@ using VkNet.Model.Attachments;
 using static System.Console;
 using VkNet.Utils;
 using Newtonsoft.Json;
+using VkNet.Model.Keyboard;
+
+using static Freetime_Planner.Modes;
 
 namespace Freetime_Planner
 {
     class Bot
     {
+        /*Регион, в котором проходит:
+         1. Авторизация бота
+         2. Включение режима отслеживания сообщений
+         3. Отправка сообщений
+        */
         #region MainArea
-        static VkApi vkapi;
+
+        //Поля региона MainArea
+
+        /// <summary>
+        /// Поле, представляющее объект класса VkApi
+        /// </summary>
+        public static VkApi vkapi;
+
+        /// <summary>
+        /// Поле, хранящее токен авторизации бота
+        /// </summary>
         private static string _access_token = "e4df2dbee9e47576aa281af2718f2946d02ce327dd080e9d154a9f2e4b5fb95dff6dae77ab915a6c69191";
-        static long userID = 0;
+
+        /// <summary>
+        /// Поле, хранящее пользователя, с которым бот ведет диалог в данный момент времени
+        /// </summary>
+        public static User user;
+
+        /// <summary>
+        /// Поле, хранящее актуальное сообщение текущего пользователя (его данные хранятся в поле User)
+        /// </summary>
+        public static Message message;
+
+        /// <summary>
+        /// Поле, хранящее клавиатуру для отправки в диалог с текущим пользователем
+        /// </summary>
+        public static MessageKeyboard keyboard;
+
+        //Функции региона MainArea
+
+        /// <summary>
+        /// Конструктор класса Bot, внутри которого выполняются все подготовительные действия
+        /// </summary>
         public Bot()  
         {
             Init();
+            Users.Upload();
+            InitResetTimer();
         }
+
+        /// <summary>
+        /// Инициализация объекта класса VkApi
+        /// </summary>
         public static void Init()
         {
             Title = "Freetime Planner";
             WritelnColor("Bot", ConsoleColor.Yellow);
             vkapi = new VkApi();
         }
+
+        /// <summary>
+        /// Авторизация бота на сервере Вконтакте
+        /// </summary>
+        /// <returns></returns>
         public static bool Authorize()
         {
             Bot VK = new Bot();
@@ -56,6 +105,10 @@ namespace Freetime_Planner
                 return false;
             }
         }
+
+        /// <summary>
+        /// Запуск режима отслеживания сообщений
+        /// </summary>
         private static void Start()
         {
             WritelnColor("Авторизция успешно завершена", ConsoleColor.Green);
@@ -64,20 +117,31 @@ namespace Freetime_Planner
             Eye();
             WritelnColor("Запросов в секунду доступно: " + vkapi.RequestsPerSecond, ConsoleColor.White);
         }
+
+        /// <summary>
+        /// Функция перезагрузки бота
+        /// </summary>
         public static void Restart()
         {
+            ExitActions();
             Process.Start((Process.GetCurrentProcess()).ProcessName);
             Environment.Exit(0);
         }
+
+        /// <summary>
+        /// Функция, отправляющая сообщение
+        /// </summary>
+        /// <param name="message"></param>
         public static void SendMessage(string message)
         {
             try
             {
                 vkapi.Messages.Send(new MessagesSendParams
                 {
-                    UserId = userID,
+                    UserId = user.ID,
                     Message = message,
-                    RandomId = DateTime.Now.Millisecond
+                    RandomId = DateTime.Now.Millisecond,
+                    Keyboard = keyboard
                 });
                 WritelnColor($"Успешно отправлен ответ: {message}", ConsoleColor.DarkBlue);
                 Console.Beep();
@@ -87,6 +151,12 @@ namespace Freetime_Planner
                 WriteLine("Ошибка! " + e.Message);
             }
         }
+
+        /// <summary>
+        /// Вспомогательная функция, выводящая текст на консоль в определенном цвете
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="color"></param>
         static void WritelnColor(string text, ConsoleColor color)
         {
             ForegroundColor = color;
@@ -95,6 +165,11 @@ namespace Freetime_Planner
         }
         #endregion
 
+        /*Регион, в котором:
+         1. Отслеживаются входящие сообщения
+         2. Идентифицируется текущий пользователь
+         3. Передается сообщение пользователя в командный центр
+        */
         #region Watcher
         static string Ts;
         static ulong? Pts;
@@ -106,6 +181,9 @@ namespace Freetime_Planner
         delegate void MessagesRecievedDelegate(VkApi owner, ReadOnlyCollection<VkNet.Model.Message> messages);
         static event MessagesRecievedDelegate NewMessages;
 
+        /// <summary>
+        /// Функция, отслеживающая входящие сообщения
+        /// </summary>
         static void Eye()
         {
             LongPollServerResponse Pool = vkapi.Messages.GetLongPollServer(true);
@@ -115,6 +193,8 @@ namespace Freetime_Planner
             WritelnColor("Слежение за сообщениями успешно активировано", ConsoleColor.Green);
             Console.Beep();
         }
+
+        //Субрегион, в котором творятся СТРАШНЫЕ вещи. Не лезь - убьет!
         #region MessagesCatching
         static async void StartAsync(string lastTs = null, ulong? lastPts = null)
         {
@@ -192,23 +272,40 @@ namespace Freetime_Planner
             return history;
         }
         #endregion
+
+        /// <summary>
+        /// Функция, определяющая пользователя, который прислал сообщение, и передающая его сообщение в CommandCentre
+        /// </summary>
+        /// <param name="owner"></param>
+        /// <param name="messages"></param>
         static void _NewMessages(VkApi owner, ReadOnlyCollection<Message> messages)
         {
             for (int i = 0; i < messages.Count; i++)
             {
                 if (messages[i].Type != MessageType.Sended)
                 {
-                    string msg = messages[i].Text;
-                    var elem = messages[i];
+                    message = messages[i];
                     VkNet.Model.User Sender = vkapi.Users.Get(new long[] { messages[i].PeerId.Value })[0];
+                    user = Users.GetUser(Sender);
                     WritelnColor($"Новое сообщение от пользователя {Sender.FirstName} {Sender.LastName}: {messages[i].Text}", ConsoleColor.Blue);
                     Console.Beep();
-                    userID = messages[i].PeerId.Value;
-                    Command(msg);
+                    CommandCentre();
                 }
             }
         }
 
+        /// <summary>
+        /// Действия, выполняемые перед окончанием программы
+        /// </summary>
+        public static void ExitActions()
+        {
+            Users.Unload();
+        }
+
+        /// <summary>
+        /// Функция, выводящая сообщение об отключении от сервера Вконтакте
+        /// </summary>
+        /// <param name="owner"></param>
         static void _Logout(VkApi owner)
         {
             WriteLine("Отключение от VK...");
@@ -216,16 +313,90 @@ namespace Freetime_Planner
 
         #endregion
 
+        /*Регион, в котором вырабатывается реакция бота 
+        на входящее сообщение от текущего пользователя (командный центр)*/
         #region Commands
-        static void Command(string msg)
+
+        /// <summary>
+        /// Командный центр, определяющий уровень пользователя и реакцию на его сообщение
+        /// </summary>
+        static void CommandCentre()
         {
-            switch (msg)
+            //Эта функция находится в разработке, в ней куча заглушек
+            switch (user.Level.Count)
             {
+                case 1:
+                    user.AddLevel(ConvertIntoMode(message));
+                    if (user.CurrentLevel() == Mode.Film)
+                        SendMessage("<клавиатура с кнопками 'Поиск по названию', 'Жанры', 'Мои рекомендации', 'Планирую посмотреть', 'Рандомный фильм', 'Саундтрек фильма', 'Назад'>");
+                    if (user.CurrentLevel() == Mode.TV)
+                        SendMessage("<клавиатура с кнопками 'Поиск по названию', 'Жанры', 'Мои рекомендации', 'Планирую посмотреть', 'Рандомный сериал', 'Саундтрек сериала', 'Назад'>");
+                    if (user.CurrentLevel() == Mode.Food)
+                        SendMessage("<информация о рандомном блюде>");
+                    break;
+                case 2:
+                    var previous_level = user.CurrentLevel();
+                    var current_level = ConvertIntoMode(message);
+                    if (previous_level == Mode.Film)
+                    {
+                        if (current_level == Mode.Random)
+                        SendMessage("<информация о рандомном фильме>");
+                    }
+                    if (previous_level == Mode.TV)
+                    {
+                        if (current_level == Mode.Random)
+                            SendMessage("<информация о рандомном сериале>");
+                    }
+                    if (current_level == Mode.Back)
+                        user.RemoveLevel();
+                    break;
                 default:
                     SendMessage("Bot is being developed");
                     break;
             }
         }
+        #endregion
+
+        /*В этом регионе создается таймер, который переводит пользователя в состояние по умолчанию, 
+          если он бездействует больше, чем определенное время*/
+        #region ResetTimer
+
+        public static Timer ResetTimer;
+        public int interval = 500; //0.5 секунды - интервал проверки бездействия пользователя
+        public long reset_time = 180000; //3 минуты - критическое время бездействия
+        public static object synclock = new object();
+
+        /// <summary>
+        /// Инициализация таймера, который каждый интервал времени из поля interval выполняет функцию Reset
+        /// </summary>
+        public void InitResetTimer()
+        {
+            ResetTimer = new Timer(new TimerCallback(Reset), null, 0, interval);
+        }
+
+        /// <summary>
+        /// Функция, вызывающая функцию ResetLevel в случае, если истекло время из поля reset_time
+        /// </summary>
+        /// <param name="obj"></param>
+        public void Reset(object obj)
+        {
+            lock(synclock)
+            {
+                Parallel.ForEach(Users.Users_Dict, (pair) =>
+                {
+                    if (TimeIsUp(pair.Value))
+                        pair.Value.ResetLevel();
+                });
+            }
+        }
+
+        /// <summary>
+        /// Функция, возвращающая true, если время истекло
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        public bool TimeIsUp(User user) => DateTime.Now.CompareTo(user.LastTime.AddMilliseconds(reset_time)) != -1;
+
         #endregion
     }
 }
