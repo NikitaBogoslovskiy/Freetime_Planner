@@ -52,7 +52,7 @@ namespace Freetime_Planner
         /// <summary>
         /// Поле, хранящее актуальное сообщение текущего пользователя (его данные хранятся в поле User)
         /// </summary>
-        public static string message;
+        public static Message message;
 
         /// <summary>
         /// Поле, хранящее клавиатуру для отправки в диалог с текущим пользователем
@@ -283,7 +283,7 @@ namespace Freetime_Planner
             {
                 if (messages[i].Type != MessageType.Sended)
                 {
-                    message = messages[i].Text;
+                    message = messages[i];
                     VkNet.Model.User Sender = vkapi.Users.Get(new long[] { messages[i].PeerId.Value })[0];
                     user = Users.GetUser(Sender);
                     WritelnColor($"Новое сообщение от пользователя {Sender.FirstName} {Sender.LastName}: {messages[i].Text}", ConsoleColor.Blue);
