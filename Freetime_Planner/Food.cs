@@ -26,12 +26,14 @@ namespace Freetime_Planner
                     break;
 
                 case Back:
-                    keyboard = ;
+                    keyboard = Keyboards.Mainmenu();
                     user.RemoveLevel();
                     SendMessage("Выберите режим");
+                    keyboard = null;
                     break;
 
             }
+            user.RemoveLevel();
         }
     }
 }

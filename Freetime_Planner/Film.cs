@@ -10,83 +10,175 @@ namespace Freetime_Planner
     {
         public static void Menu()
         {
-            switch (user.CurrentLevel())
+            if (Payload.PayloadValue(message.Payload) != string.Empty)
             {
-                case Search:
-                    keyboard = null;
-                    SendMessage("Введите название фильма");
-                    break;
+                switch (user.CurrentLevel())
+                {
+                    case Watched:
+                        keyboard = Keyboards.FilmWatched();
+                        SendMessage("Понравился фильм?");
+                        keyboard = null;
+                        break;
 
-                case Recommendations:
-                    template = ;                                         //карусэл сдэлать
-                    SendMessage("Рекомендуемые фильмы");
-                    break;
+                    case WantToWatch:
+                        SendMessage("Добавлено в список планируемых фильмов");
+                        break;
 
-                case PlanToWatch:
-                    keyboard = ;                                         //dodelat kebord
-                    SendMessage("Список планируемых к просмотру фильмов");
-                    break;
+                    case Soundtrack:
+                        SendMessage("Саундтрек к кинофильму");
+                        break;
 
-                case Modes.Mode.Random:
-                    keyboard = ;
-                    SendMessage("Подробная информация по случайному кинофильму");
-                    break;
+                    case GenreFood:
+                        SendMessage("Видео-инструкция приготовления");
+                        break;
 
-                case Back:
-                    keyboard = ;
-                    user.RemoveLevel();
-                    SendMessage("Выберите режим");
-                    break;
+                    case BlackList:
+                        SendMessage("Добавлено в список нежелаемых фильмов");
+                        break;
 
-                default:
-                    break;
+                    case More:
+                        keyboard = Keyboards.FilmSearch();
+                        SendMessage("Подробная информация по кинофильму");
+                        keyboard = null;
+                        break;
+
+                    case AlreadyWatched:
+                        SendMessage("Введите название просмотренного кинофильма");
+                        break;
+
+                    case Yes:
+                        SendMessage("Круто! Будем советовать похожие");
+                        break;
+
+                    case No:
+                        SendMessage("Жаль... Постараемся подобрать что-нибудь получше");
+                        break;
+
+                    default:
+                        break;
+                }
             }
+            else 
+            {
+                switch (user.CurrentLevel())
+                {
+                    case Search:
+                        keyboard = null;
+                        SendMessage("Введите название фильма");
+                        break;
+
+                    case Recommendations:
+                        template = Keyboards.FilmMyRecomenation();
+                        keyboard = null;
+                        SendMessage("Рекомендуемые фильмы");
+                        template = null;
+                        break;
+
+                    case PlanToWatch:
+                        keyboard = Keyboards.FilmPlanToWatch();                                         //dodelat kebord
+                        SendMessage("Список планируемых к просмотру фильмов");
+                        keyboard = null;
+                        break;
+
+                    case Modes.Mode.Random:
+                        keyboard = Keyboards.RandomFilm();
+                        SendMessage("Подробная информация по случайному кинофильму");
+                        keyboard = null;
+                        break;
+
+                    case Back:
+                        keyboard = Keyboards.Mainmenu();
+                        user.RemoveLevel();
+                        SendMessage("Жми любую кнопку");
+                        keyboard = null;
+                        break;
+                    default:
+                        SendMessage("Вероятно, ты ввел словесно команду, не нажав кнопку. Используй кнопки");
+                        break;
+                }
+            }
+
+            if (user.CurrentLevel() != Search && user.CurrentLevel() != AlreadyWatched)
+                user.RemoveLevel();
         }
 
-        public static void ButtonClicked()
+        public static void SecondLevel()
         {
             switch (user.CurrentLevel())
             {
                 case Search:
-                    if (message.Text == "Хочу посмотреть")
-                        SendMessage("Кинофильм добавлен в список планируемых фильмов");
+                    keyboard = Keyboards.FilmSearch();
+                    SendMessage("Подробная информация по кинофильму");
+                    keyboard = null;
+                    break;
+                case AlreadyWatched:
+                    SendMessage("Фильм перенес в список просмотренных");
+                    keyboard = Keyboards.FilmWatched();
+                    SendMessage("Понравился фильм?");
+                    keyboard = null;
+                    break;
+                default:
+                    break;
+            }
+            user.RemoveLevel();
+        }
 
-                    else if (message.Text == "Посмотрел")
-                        SendMessage("Кинофильм добавлен в просмотренные");                   // реализовать понравилось или нет
-
-                    else if (message.Text == "Саундтрек") 
-                        SendMessage("Саундтрэк из фильма");                                  //реализовать список аудиозаписей
-                    
-                    else if (message.Text == "Что поесть") 
-                        SendMessage("Видео-инструкция по приготовлению еды для просмотра");
-
-                    else if (message.Text == "Не показывать")
-                        SendMessage("Фильм добавлен в черный список");
-
-                    else if (message.Text == "Да")
-                        SendMessage("???");
-
-                    else if (message.Text == "Нет")
-                        SendMessage("???");
+        /*public static void ButtonClicked()
+        {
+            switch (user.CurrentLevel())
+            {
+                case Search:
+                    if (message.Payload == null)
+                        SendMessage($"Подробная информация по кинофильму {message.Text}");
                     else
-                      SendMessage($"Подробная информация по кинофильму {message.Text}");
+                    {
+                        if (message.Text == "Хочу посмотреть")
+                            SendMessage("Кинофильм добавлен в список планируемых фильмов");
+
+                        else if (message.Text == "Посмотрел")
+                            SendMessage("Кинофильм добавлен в просмотренные");                   // реализовать понравилось или нет
+
+                        else if (message.Text == "Саундтрек")
+                            SendMessage("Саундтрэк из фильма");                                  //реализовать список аудиозаписей
+
+                        else if (message.Text == "Что поесть")
+                            SendMessage("Видео-инструкция по приготовлению еды для просмотра");
+
+                        else if (message.Text == "Не показывать")
+                            SendMessage("Фильм добавлен в черный список");
+
+                        else if (message.Text == "Да")
+                            SendMessage("Круто!");
+
+                        else if (message.Text == "Нет")
+                            SendMessage("Сочувствую...");
+                    }
                     break;
 
                 case Back:
-                    keyboard = ;
+                    keyboard = Keyboards.Mainmenu();
                     user.RemoveLevel();
-                    SendMessage("Выберите режим");
+                    user.RemoveLevel();
+                    SendMessage("Жми любую кнопку");
                     break;
 
                 case Recommendations:
                     if (message.Text == "Подробнее")
                         SendMessage("Подробная информация по выбраному кинофильму");
+                    else
+                        SendMessage("Выберите кнопку 'Подробнее' или любую кнопку из выпадающего меню");
                     break;
 
                 case PlanToWatch:
-                    if (message.Text == "Уже посмотрел")
-                        SendMessage("Введите название просмотренного кинофильма");
-                    else SendMessage($"Кинофильм {message.Text} успешно удален из списка планируемых фильмов");
+                    if (message.Payload == string.Empty)
+                        SendMessage($"Кинофильм {message.Text} успешно удален из списка планируемых фильмов");
+                    else
+                    {
+                        if (message.Text == "Уже посмотрел")
+                            SendMessage("Введите название просмотренного кинофильма");
+                        else 
+                            SendMessage($"Выберите кнопку 'Уже посмотрел' или любую кнопку из выпадающего меню");
+                    }
                     break;
 
                 case Modes.Mode.Random:
@@ -106,15 +198,15 @@ namespace Freetime_Planner
                         SendMessage("Фильм добавлен в черный список");
 
                     else if (message.Text == "Да")
-                        SendMessage("???");
+                        SendMessage("Круто");
 
                     else if (message.Text == "Нет")
-                        SendMessage("???");                                     
+                        SendMessage("Сочувствую");                                     
                     break;
                 default:
                     break;
             }
-        }
+        }*/
 
     }
 }

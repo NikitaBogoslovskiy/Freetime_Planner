@@ -55,8 +55,8 @@ namespace Freetime_Planner
                 var new_user = new User(sender.FirstName, sender.LastName, sender.Id);
                 Users_Dict.Add(sender.Id, new_user);
                 Unload();
-                Bot.keyboard = Keyboard.MainMenu();
-                Bot.SendMessage("Салам Алейкум");
+                Bot.keyboard = Keyboards.Mainmenu();
+                Bot.SendMessage("Привет! Жми кнопку из меню");
                 return new_user;
             }
         }

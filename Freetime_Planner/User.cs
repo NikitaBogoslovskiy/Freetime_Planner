@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using static Freetime_Planner.Modes;
+using Newtonsoft.Json;
 
 namespace Freetime_Planner
 {
@@ -90,6 +91,15 @@ namespace Freetime_Planner
             Level = new LinkedList<Mode>();
             Level.AddLast(Mode.Default);
             Users.Unload();
+            //Bot.keyboard = Keyboards.Mainmenu();
+            //Bot.SendMessage("Жми любую кнопку");
         }
+    }
+
+    public class Payload
+    {
+        public string text { get; set; }
+
+        public static string PayloadValue(string payload) => payload == null ? "" : JsonConvert.DeserializeObject<Payload>(payload).text;
     }
 }

@@ -340,35 +340,36 @@ namespace Freetime_Planner
                 case 1:
                     try 
                     {
-                        user.AddLevel(ConvertIntoMode(message.Text));
+                        user.AddLevel(MainMenu(message.Text));
                     }
                     catch (ArgumentException e)
                     {
+                        keyboard = Keyboards.Mainmenu();
                         SendMessage(e.Message);
                         break;
                     }
                     if (user.CurrentLevel() == Mode.Film)
                     {
-                        keyboard = ;
-                        SendMessage("Выберите режим обзора фильма");
+                        keyboard = Keyboards.Film();
+                        SendMessage("Выберите режим обзора фильмов");
                     }
-                    if (user.CurrentLevel() == Mode.TV)
+                    else if (user.CurrentLevel() == Mode.TV)
                     { 
-                        keyboard = ;
-                    SendMessage("Выберите режим обзора сериала");
+                        keyboard = Keyboards.TV();
+                        SendMessage("Выберите режим обзора сериалов");
                     }
-
-                    if (user.CurrentLevel() == Mode.Food)
+                    else if (user.CurrentLevel() == Mode.Food)
                     {
-                        keyboard = ;
-                        SendMessage("Выберите еду под просмотр");
+                        keyboard = Keyboards.Food();
+                        SendMessage("Выберите тип еды под просмотр");
                     }
                     break;
+
                 case 2:
                     var previous_level = user.CurrentLevel();
                     try
                     {
-                        user.AddLevel(ConvertIntoMode(message.Text));
+                        user.AddLevel(SecondMenu(message.Text));
                     }
                     catch (ArgumentException e)
                     {
@@ -379,27 +380,26 @@ namespace Freetime_Planner
                     {
                         Film.Menu();
                     }
-                    if (previous_level == Mode.TV)
+                    else if (previous_level == Mode.TV)
                     {
                         TV.Menu();
                     }
-                    if (previous_level == Mode.Food)
+                    else if (previous_level == Mode.Food)
                     {
                         Food.Menu();
                     }
                     break;
 
                 case 3:
-                      previous_level = user.PreviousLevel();
+                    previous_level = user.PreviousLevel();
                     if (previous_level == Mode.Film)
                     {
-                        Film.ButtonClicked();
+                        Film.SecondLevel();
                     }
-                    if (previous_level == Mode.TV)
+                    else if (previous_level == Mode.TV)
                     {
-                        TV.ButtonClicked();
+                        TV.SecondLevel();
                     }
-
                     break;
 
                 default:                                                    
@@ -415,7 +415,7 @@ namespace Freetime_Planner
 
         public static Timer ResetTimer;
         public int interval = 500; //0.5 секунды - интервал проверки бездействия пользователя
-        public long reset_time = 180000; //3 минуты - критическое время бездействия
+        public long reset_time = 60000; //3 минуты - критическое время бездействия
         public static object synclock = new object();
 
         /// <summary>
@@ -434,11 +434,11 @@ namespace Freetime_Planner
         {
             lock(synclock)
             {
-                Parallel.ForEach(Users.Users_Dict, (pair) =>
+                foreach(var pair in Users.Users_Dict)
                 {
                     if (TimeIsUp(pair.Value))
                         pair.Value.ResetLevel();
-                });
+                }
             }
         }
 
