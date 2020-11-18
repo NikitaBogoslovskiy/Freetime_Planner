@@ -25,7 +25,7 @@ namespace Freetime_Planner
 
         public int Siasons { get; set; }
 
-        TV(string _ID, string _Name, string _Description, string _Genres, string _DateRelease, double _Rate, string _ImageURL, string _SeriaLength, string _Countries, int _Siasons)
+         TV(string _ID, string _Name, string _Description, string _Genres, string _DateRelease, double _Rate, string _ImageURL, string _SeriaLength, string _Countries, int _Siasons)
         {
             ID = _ID;//1
             Name = _Name;//2
