@@ -78,6 +78,7 @@ namespace Freetime_Planner
             Init();
             Users.Upload();
             InitResetTimer();
+            Movie.InitFilms();
         }
 
         /// <summary>
@@ -382,7 +383,7 @@ namespace Freetime_Planner
                     }
                     if (previous_level == Mode.Film)
                     {
-                        Film.Menu();
+                        Movie.Menu();
                     }
                     else if (previous_level == Mode.TV)
                     {
@@ -398,7 +399,7 @@ namespace Freetime_Planner
                     previous_level = user.PreviousLevel();
                     if (previous_level == Mode.Film)
                     {
-                        Film.SecondLevel();
+                        Movie.SecondLevel();
                     }
                     else if (previous_level == Mode.TV)
                     {

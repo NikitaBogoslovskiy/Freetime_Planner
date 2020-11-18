@@ -9,6 +9,7 @@ using static VkNet.Model.Template.MessageTemplate;
 using static VkNet.Enums.SafetyEnums.TemplateType;
 using VkNet.Model.Template.Carousel;
 using System.Linq;
+//using static Freetime_Planner.Movie;
 
 
 namespace Freetime_Planner
@@ -116,25 +117,31 @@ namespace Freetime_Planner
             carousel.Type = Carousel;
             // carousel.Elements
             var arr = new List<CarouselElement>();
-            for (var i=0;i<5;i++)
+            foreach (var par in Movie.Films)
             {
-                arr.Add(CarouselElem("Название Фильма", "Жанры"));
+                arr.Add(CarouselFilm(par.Value));
             }
             carousel.Elements = arr;
 
 
             return carousel;
         }
-        public static CarouselElement CarouselElem(string Title, string Description,string ID ="ID")
+        public static CarouselElement CarouselFilm(Movie mov)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
-            button.AddButton("Подробнее", ID, Positive, "text");
+            button.AddButton("Подробнее", mov.ID, Positive, "text");
             var element = new CarouselElement();
-            element.Title = Title;
-            element.Description = Description;
+            element.Title = mov.Name;
+            element.Description = mov.Genres;
             element.Buttons = button.Build().Buttons.First();
             return element;
 
+        }
+        
+        public static CarouselElement CarouselElem()
+        {
+            var element = new CarouselElement();
+            return element;
         }
 
         /// <summary>
@@ -219,6 +226,8 @@ namespace Freetime_Planner
             return button.Build();
         }
 
+       
+
         //"Сериалы"->"Мои рекомендации"
         public static MessageTemplate TVMyRecomenation()
         {
@@ -227,7 +236,7 @@ namespace Freetime_Planner
             carousel.Elements = new List<CarouselElement>();
             for (var i = 0; i < 5; i++)
             {
-                carousel.Elements.Append(CarouselElem("Название Сериала", "Жанры"));
+                carousel.Elements.Append(CarouselElem());
             }
 
 
