@@ -300,7 +300,11 @@ namespace Freetime_Planner
                     WritelnColor($"Новое сообщение от пользователя {Sender.FirstName} {Sender.LastName}: {messages[i].Text}", ConsoleColor.Blue);
                     Console.Beep();
                     if (IsNew)
-                        return; 
+                    {
+                        keyboard = Keyboards.Mainmenu();
+                        SendMessage("Привет! Жми кнопку из меню");
+                        return;
+                    } 
                     CommandCentre();
                 }
             }
