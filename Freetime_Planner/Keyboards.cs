@@ -80,8 +80,7 @@ namespace Freetime_Planner
             result.AddButton("Назад", "", Default, "text");
 
             return result.Build();
-
-
+ 
         }
 
         #region Film
