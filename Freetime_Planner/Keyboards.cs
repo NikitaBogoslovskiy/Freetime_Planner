@@ -9,8 +9,8 @@ using static VkNet.Model.Template.MessageTemplate;
 using static VkNet.Enums.SafetyEnums.TemplateType;
 using VkNet.Model.Template.Carousel;
 using System.Linq;
-//using static Freetime_Planner.Movie;
-
+using static Freetime_Planner.Movie;
+using static Freetime_Planner.TV;
 
 namespace Freetime_Planner
 {
@@ -81,8 +81,7 @@ namespace Freetime_Planner
             result.AddButton("Назад", "", Default, "text");
 
             return result.Build();
-
-
+ 
         }
 
         #region Film
@@ -234,16 +233,24 @@ namespace Freetime_Planner
             var carousel = new MessageTemplate();
             carousel.Type = Carousel;
             carousel.Elements = new List<CarouselElement>();
-            for (var i = 0; i < 5; i++)
+            
+            foreach (var pr in Series)
             {
-                carousel.Elements.Append(CarouselElem());
+                carousel.Elements.Append(CarouselTV(pr.Value));
             }
-
-
 
             return carousel;
         }
-
+        public static CarouselElement CarouselTV(TV Series)
+        {
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            button.AddButton("Подробнее", Series.ID, Positive, "text");
+            var element = new CarouselElement();
+            element.Title = Series.Name;
+            element.Description = Series.Genres;
+            element.Buttons = button.Build().Buttons.First();
+            return element;
+        }
         /// <summary>
         /// "Сериалы"->"Планирую посмотреть"
         /// </summary>
