@@ -44,7 +44,8 @@ namespace Freetime_Planner
             Name = name;
             Surname = surname;
             ID = id;
-            ResetLevel();
+            Level = new LinkedList<Mode>();
+            Level.AddLast(Mode.Default);
         }
 
         /// <summary>
@@ -78,7 +79,7 @@ namespace Freetime_Planner
         public Mode CurrentLevel() => Level.Last.Value;
 
         /// <summary>
-        /// 
+        /// Возвращает значение предыдущего уровня
         /// </summary>
         /// <returns></returns>
         public Mode PreviousLevel() => Level.Last.Previous.Value;
@@ -96,6 +97,9 @@ namespace Freetime_Planner
         }
     }
 
+    /// <summary>
+    /// класс объекта типа Message.Payload
+    /// </summary>
     public class Payload
     {
         public string text { get; set; }

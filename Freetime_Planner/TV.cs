@@ -8,8 +8,12 @@ namespace Freetime_Planner
 {
     public static class TV
     {
+        /// <summary>
+        /// Основное меню кнопки "Сериалы"
+        /// </summary>
         public static void Menu()
         {
+            //inline-кнопки
             if (Payload.PayloadValue(message.Payload) != string.Empty)
             {
                 switch (user.CurrentLevel())
@@ -60,6 +64,7 @@ namespace Freetime_Planner
             }
             else
             {
+                //кнопки меню
                 switch (user.CurrentLevel())
                 {
                     case Search:
@@ -69,13 +74,13 @@ namespace Freetime_Planner
 
                     case Recommendations:
                         keyboard = null;
-                        template = Keyboards.FilmMyRecomenation();                                         //карусэл сдэлать
+                        template = Keyboards.FilmMyRecomenation();                                        
                         SendMessage("Рекомендуемые сериалы");
                         template = null;
                         break;
 
                     case PlanToWatch:
-                        keyboard = Keyboards.FilmPlanToWatch();                                         //dodelat kebord
+                        keyboard = Keyboards.FilmPlanToWatch();                                         
                         SendMessage("Список планируемых к просмотру сериалов");
                         keyboard = null;
                         break;
@@ -101,6 +106,9 @@ namespace Freetime_Planner
                 user.RemoveLevel();
         }
 
+        /// <summary>
+        /// Второй уровень вложенности кнопки "Сериалы"
+        /// </summary>
         public static void SecondLevel()
         {
             switch (user.CurrentLevel())
@@ -120,91 +128,5 @@ namespace Freetime_Planner
             }
             user.RemoveLevel();
         }
-
-        /*public static void ButtonClicked()
-        {
-            switch (user.CurrentLevel())
-            {
-                case Search:
-                    if (message.Payload == string.Empty)
-                        SendMessage($"Подробная информация по сериалу {message.Text}");
-                    else
-                    {
-                        if (message.Text == "Хочу посмотреть")
-                            SendMessage("Сериал добавлен в список планируемых фильмов");
-
-                        else if (message.Text == "Посмотрел")
-                            SendMessage("Сериал добавлен в просмотренные");                   // реализовать понравилось или нет
-
-                        else if (message.Text == "Саундтрек")
-                            SendMessage("Саундтрэк из сериала");                                  //реализовать список аудиозаписей
-
-                        else if (message.Text == "Что поесть")
-                            SendMessage("Видео-инструкция по приготовлению еды для просмотра");
-
-                        else if (message.Text == "Не показывать")
-                            SendMessage("Сериал добавлен в черный список");
-
-                        else if (message.Text == "Да")
-                            SendMessage("Круто!");
-
-                        else if (message.Text == "Нет")
-                            SendMessage("Сочувствую");
-                    }
-                    break;
-
-                case Back:
-                    keyboard = Keyboards.Mainmenu();
-                    user.RemoveLevel();
-                    user.RemoveLevel();
-                    SendMessage("Выберите режим");
-                    break;
-
-                case Recommendations:
-                    if (message.Text == "Подробнее")
-                        SendMessage("Подробная информация по выбраному сериалу");
-                    else
-                        SendMessage("Выберите кнопку 'Подробнее' или любую кнопку из выпадающего меню");
-                    break;
-
-                case PlanToWatch:
-                    if (message.Payload == string.Empty)
-                        SendMessage($"Сериал {message.Text} успешно удален из списка планируемых фильмов");
-                    else
-                    {
-                        if (message.Text == "Уже посмотрел")
-                            SendMessage("Введите название просмотренного сериала");
-                        else
-                            SendMessage($"Выберите кнопку 'Уже посмотрел' или любую кнопку из выпадающего меню");
-                    }
-                    break;
-
-                case Modes.Mode.Random:
-                    if (message.Text == "Хочу посмотреть")
-                        SendMessage("Сериал добавлен в список планируемых сериалов");
-
-                    else if (message.Text == "Посмотрел")
-                        SendMessage("Сериал добавлен в просмотренные");                   // реализовать понравилось или нет
-
-                    else if (message.Text == "Саундтрек")
-                        SendMessage("Саундтрэк из сериала");                                  //реализовать список аудиозаписей
-
-                    else if (message.Text == "Что поесть")
-                        SendMessage("Видео-инструкция по приготовлению еды для просмотра");
-
-                    else if (message.Text == "Не показывать")
-                        SendMessage("Сериал добавлен в черный список");
-
-                    else if (message.Text == "Да")
-                        SendMessage("Круто");
-
-                    else if (message.Text == "Нет")
-                        SendMessage("Сочувствую...");
-                    break;
-                default:
-                    break;
-            }
-        }
-        */
     }
 }
