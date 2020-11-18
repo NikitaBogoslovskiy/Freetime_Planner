@@ -59,7 +59,7 @@ namespace Freetime_Planner
                 " — и подпольных организаций, которые пытаются его завербовать с целью обрушения самых могучих американских корпораций.",
                 "триллер, драма, криминал", "6.02.2017", 7.8, "https://www.kinopoisk.ru/series/859908/", "49 мин.", "США", 4),
             };
-
+           
         }
 
         /// <summary>
@@ -128,19 +128,23 @@ namespace Freetime_Planner
 
                     case Recommendations:
                         keyboard = null;
-                        template = Keyboards.FilmMyRecomenation();                                        
+                        template = Keyboards.TVMyRecomenation();                                        
                         SendMessage("Рекомендуемые сериалы");
                         template = null;
                         break;
 
                     case PlanToWatch:
-                        keyboard = Keyboards.FilmPlanToWatch();                                         
-                        SendMessage("Список планируемых к просмотру сериалов");
+                        keyboard = Keyboards.TVPlanToWatch();
+                        //SendMessage("Список планируемых к просмотру сериалов");
+                        SendMessage($"Список планируемых к просмотру сериалов:\n{Series["77044"].Name}\n{Series["1032606"].Name}\n{Series["492613"].Name}\n{Series["859908"].Name}");
+
                         keyboard = null;
+
+
                         break;
 
                     case Modes.Mode.Random:
-                        keyboard = Keyboards.RandomFilm();
+                        keyboard = Keyboards.RandomTV();
                         SendMessage("Подробная информация по случайному сериалу");
                         keyboard = null;
                         break;

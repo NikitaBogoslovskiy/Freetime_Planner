@@ -227,7 +227,7 @@ namespace Freetime_Planner
             
             foreach (var pr in Series)
             {
-                
+                carousel.Elements.Append(CarouselTV(pr.Value));
             }    
 
             return carousel;
