@@ -1,0 +1,6 @@
+*.vs/
+/Freetime_Planner/bin/*
+/Freetime_Planner/obj/*
+/Freetime_Planner/Properties/*
+/Freetime_Planner/Freetime_Planner.csproj.user
+/Freetime_Planner/Settings.job
