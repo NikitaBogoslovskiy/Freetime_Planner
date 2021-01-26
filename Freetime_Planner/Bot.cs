@@ -434,6 +434,7 @@ namespace Freetime_Planner
                         SendMessage(e.Message);
                         break;
                     }
+
                     if (user.CurrentLevel() == Mode.Film)
                     {
                         keyboard = Keyboards.FilmKeyboard;
@@ -474,12 +475,14 @@ namespace Freetime_Planner
                         SendMessage(e.Message);
                         break;
                     }
+
                     if (previous_level == Mode.Film)
                     {
                         if (payload != "Command")
                         {
                             switch (user.CurrentLevel())
                             {
+                                //"Посмотрел"
                                 case Watched:
                                     user.HideFilm(int.Parse(p.filmId));
                                     keyboard = Keyboards.FilmWatched(p.nameRu, p.nameEn, p.filmId, p.date, p.genres);
@@ -488,12 +491,14 @@ namespace Freetime_Planner
                                     user.RemoveLevel();
                                     break;
 
+                                //"Хочу посмотреть"
                                 case WantToWatch:
                                     user.AddPlannedFilm(p.nameRu, p.nameEn, p.date);
                                     SendMessage("Добавлено в список планируемых фильмов");
                                     user.RemoveLevel();
                                     break;
 
+                                //"Саундтрек"
                                 case Soundtrack:
                                     attachments = Film.Methods.Soundtrack(p.nameRu).Select(a => a as MediaAttachment).ToList();
                                     SendMessage("Саундтрек к кинофильму");
@@ -501,6 +506,7 @@ namespace Freetime_Planner
                                     user.RemoveLevel();
                                     break;
 
+                                //"Что поесть"
                                 case GenreFood:
                                     attachments = new List<MediaAttachment> { Film.Methods.Food(p.genres.Split('*')) as MediaAttachment };
                                     SendMessage("Видео-инструкция приготовления несложного блюда");
@@ -508,16 +514,18 @@ namespace Freetime_Planner
                                     user.RemoveLevel();
                                     break;
 
+                                //"Не показывать"
                                 case BlackList:
                                     user.HideFilm(int.Parse(p.filmId));
                                     SendMessage("Добавлено в список нежелаемых фильмов");
                                     user.RemoveLevel();
                                     break;
 
+                                //"Подробнее"
                                 case More:
                                     if (user.FilmRecommendations.TryGetValue(int.Parse(p.filmId), out Film.FilmObject film))
                                     {
-                                        attachments = null; //скачать изображение
+                                        attachments = new List<MediaAttachment> { Attachments.PosterObject(film.data.posterUrl, film.data.filmId.ToString()) }; //скачать изображение
                                         keyboard = Keyboards.FilmSearch(p.nameRu, p.nameEn, p.filmId, p.date, p.genres);
                                         SendMessage(Film.Methods.FullInfo(film));
                                     }
@@ -531,16 +539,19 @@ namespace Freetime_Planner
                                     user.RemoveLevel();
                                     break;
 
+                                //"Уже посмотрел"
                                 case AlreadyWatched:
                                     SendMessage("Введи номер просмотренного кинофильма");
                                     break;
 
+                                //"Да" (посмотрел, понравилось)
                                 case Yes:
                                     user.LikeFilm(p.nameEn);
                                     SendMessage("Круто! Будем советовать похожие");
                                     user.RemoveLevel();
                                     break;
 
+                                //"Нет" (посмотрел, не понравилось)
                                 case No:
                                     SendMessage("Жаль... Постараемся подобрать что-нибудь получше");
                                     user.RemoveLevel();
@@ -555,11 +566,13 @@ namespace Freetime_Planner
                             //кнопки меню
                             switch (user.CurrentLevel())
                             {
+                                //"Поиск по названию"
                                 case Search:
                                     keyboard = null;
                                     SendMessage("Введи название фильма");
                                     break;
 
+                                //"Мои рекомендации"
                                 case Recommendations:
                                     //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
                                     template = user.GetFilmRecommendations();                                  
@@ -569,6 +582,7 @@ namespace Freetime_Planner
                                     user.RemoveLevel();
                                     break;
 
+                                //"Планирую посмотреть"
                                 case PlanToWatch:
                                     keyboard = Keyboards.FilmPlanToWatch();
                                     SendMessage(user.GetPlannedFilms());
@@ -576,6 +590,7 @@ namespace Freetime_Planner
                                     user.RemoveLevel();
                                     break;
 
+                                //"Рандомный фильм"
                                 case Modes.Mode.Random:
                                     template = Film.Methods.Random();
                                     keyboard = null;
@@ -584,6 +599,7 @@ namespace Freetime_Planner
                                     user.RemoveLevel();
                                     break;
 
+                                //"Назад"
                                 case Back:
                                     keyboard = Keyboards.MainKeyboard;
                                     SendMessage("Выбери один из режимов");
@@ -592,6 +608,7 @@ namespace Freetime_Planner
                                     user.RemoveLevel();
                                     break;
 
+                                //"Помощь"
                                 case Help:
                                     SendMessage(FilmHelp);
                                     user.RemoveLevel();
@@ -776,11 +793,14 @@ namespace Freetime_Planner
 
                         switch (user.CurrentLevel())
                         {
+                            //<название фильма> (после кнопки "Поиск по названию")
                             case Search:
                                 template = Film.Methods.Search(p.nameRu);
                                 SendMessage("Результаты поиска");
                                 template = null;
                                 break;
+
+                            //<порядковый номер фильма> (после кнопки "Уже посмотрел")
                             case AlreadyWatched:
                                 int index = int.Parse(message.Text) - 1;
                                 Film.FilmObject film = null;

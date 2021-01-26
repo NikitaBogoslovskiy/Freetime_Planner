@@ -100,7 +100,7 @@ namespace Freetime_Planner
 
         #region Film
         /// <summary>
-        ///Создаёт клавиатуру в сообщении для кнопоки "Фильмы"->"Поиск по названию"  
+        /// Создаёт клавиатуру в сообщении для кнопоки "Фильмы"->"Поиск по названию"  
         /// </summary>
         /// <button></button>
         public static MessageKeyboard FilmSearch(string nameRu, string nameEn, string filmID, string date, string genres)
@@ -124,7 +124,13 @@ namespace Freetime_Planner
         }
       
         //"Фильмы"->"Мои рекомендации"
-        public static MessageTemplate FilmMyRecommendations(Film.FilmObject[] farray)
+
+        /// <summary>
+        /// Возвращает карусель из нескольких фильмов из списка рекомендаций
+        /// </summary>
+        /// <param name="farray"></param>
+        /// <returns></returns>
+        public static MessageTemplate FilmMyRecommendations(IEnumerable<Film.FilmObject> farray)
         {
             var carousel = new MessageTemplate();
             carousel.Type = Carousel;
@@ -137,6 +143,12 @@ namespace Freetime_Planner
 
             return carousel;
         }
+
+        /// <summary>
+        /// Возвращает один элемент карусели фильмов-рекомендаций
+        /// </summary>
+        /// <param name="film"></param>
+        /// <returns></returns>
         public static CarouselElement CarouselFilm(Film.FilmObject film)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
@@ -151,6 +163,11 @@ namespace Freetime_Planner
 
         }
 
+        /// <summary>
+        /// Возвращает результаты поиска фильмов по названию в виде карусели
+        /// </summary>
+        /// <param name="results"></param>
+        /// <returns></returns>
         public static MessageTemplate FilmResults(FilmResults.Results results)
         {
             var carousel = new MessageTemplate();
@@ -164,6 +181,11 @@ namespace Freetime_Planner
 
             return carousel;
         }
+        /// <summary>
+        /// Возвращает один элемент карусели из результатов поиска фильма по названию
+        /// </summary>
+        /// <param name="film"></param>
+        /// <returns></returns>
         public static CarouselElement CarouselFilmResult(FilmResults.Film film)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
@@ -178,6 +200,11 @@ namespace Freetime_Planner
 
         }
 
+        /// <summary>
+        /// Возвращает результаты случайного поиска фильмов в виде карусели
+        /// </summary>
+        /// <param name="results"></param>
+        /// <returns></returns>
         public static MessageTemplate RandomFilmResults(RandomFilms.Results results)
         {
             var carousel = new MessageTemplate();
@@ -191,6 +218,11 @@ namespace Freetime_Planner
 
             return carousel;
         }
+        /// <summary>
+        /// Возвращает один элемент карусели рандомных фильмов
+        /// </summary>
+        /// <param name="film"></param>
+        /// <returns></returns>
         public static CarouselElement CarouselRandomFilmResult(RandomFilms.Film film)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
@@ -200,7 +232,7 @@ namespace Freetime_Planner
             element.Title = film.nameRu;
             element.Description = genres.Replace("*", ", ");
             element.Buttons = button.Build().Buttons.First();
-            element.PhotoId = null;//нужно загрузить фотографию на сервер
+            element.PhotoId = Attachments.RandomFilmPosterID(film);
             return element;
 
         }

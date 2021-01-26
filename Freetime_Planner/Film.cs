@@ -92,6 +92,14 @@ namespace Freetime_Planner
             public ExternalId externalId { get; set; }
             public Budget budget { get; set; }
             public int Priority { get; set; }
+
+            public FilmObject(string nameRu, string nameEn, string date)
+            {
+                data = new Data();
+                data.nameRu = nameRu;
+                data.nameEn = nameEn;
+                data.premiereRu = date;
+            }
         }
 
         /// <summary>
@@ -106,7 +114,9 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static string FullInfo(int filmID)
             {
+                //TODO
                 return null;
+                //присвоить поля attachments и keyboard
             }
 
             /// <summary>
@@ -116,6 +126,7 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static string FullInfo(Film.FilmObject film)
             {
+                //TODO
                 return null;
             }
 
@@ -126,7 +137,9 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static MessageTemplate Search(string filmName)
             {
-                return null;
+                FilmResults.Results results = null; 
+                //TODO
+                return Keyboards.FilmResults(results);
             }
 
             /// <summary>
@@ -135,7 +148,9 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static MessageTemplate Random()
             {
-                return null;
+                RandomFilms.Results results = null; 
+                //TODO
+                return Keyboards.RandomFilmResults(results);
             }
 
             /// <summary>

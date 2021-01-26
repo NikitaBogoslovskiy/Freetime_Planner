@@ -11,17 +11,49 @@ using System.Drawing.Imaging;
 
 namespace Freetime_Planner
 {
-    /*
+    
     public static class Attachments
     {
+
+        public static string RandomFilmPosterID(RandomFilms.Film film)
+        {
+            string path = $"film_{film.filmId}.jpg";
+            WebClient wc = new WebClient();
+            wc.DownloadFile(film.posterUrl, path);
+            CropAndOverwrite(path);
+            var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id, Bot.group_id);
+            var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+            var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+            {
+                SaveFileResponse = responseFile,
+                AlbumId = Bot.album_id,
+                GroupId = Bot.group_id
+            }).First();
+            var vkid = $"-{Bot.group_id}_{photo.Id}";
+            File.Delete(path);
+            return vkid;
+        }
+
+        public static Photo PosterObject(string url, string filmID)
+        {
+            WebClient wc = new WebClient();
+            wc.DownloadFile(url, $"poster_{filmID}1.jpg");
+            var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(Bot.user.ID);
+            var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, $"poster_{filmID}1.jpg"));
+            var photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
+            File.Delete($"poster_{filmID}1.jpg");
+            return photo;
+        }
+
+        /*
         /// <summary>
         /// Возвращает ID ВК загруженного постера фильма
         /// </summary>
         /// <param name="movie"></param>
         /// <returns></returns>
-        public static string PosterID(Film movie)
+        public static string PosterID(Film.FilmObject movie)
         {
-            if (movie.PhotoID == null)
+            if (movie.V == null)
             {
                 string path = $"film_{movie.ID}.jpg";
                 WebClient wc = new WebClient();
@@ -40,7 +72,8 @@ namespace Freetime_Planner
             }
             return movie.PhotoID;
         }
-
+        */
+        /*
         /// <summary>
         /// Возвращает ID ВК загруженного постера сериала
         /// </summary>
@@ -67,7 +100,8 @@ namespace Freetime_Planner
             }
             return tv.PhotoID;
         }
-
+        */
+        /*
         /// <summary>
         /// Возвращает объект Photo, представляющий постер фильма
         /// </summary>
@@ -83,7 +117,8 @@ namespace Freetime_Planner
             File.Delete($"poster_{movie.ID}1.jpg");
             return photo;
         }
-
+        */
+        /*
         /// <summary>
         /// Возвращает объект Photo, представляющий постер сериала
         /// </summary>
@@ -99,6 +134,11 @@ namespace Freetime_Planner
             File.Delete($"tv_{tv.ID}.jpg");
             return photo;
         }
+        */
+
+
+
+        //--------------------------------------------------Приватные методы по обработке фотографий-----------------------------------------
 
         /// <summary>
         /// Вспомогательная приватная функция, обрезающая изображения в отношении 13:8
@@ -136,5 +176,5 @@ namespace Freetime_Planner
             croppedImage.Dispose();
         }
     }
-    */
+    
 }

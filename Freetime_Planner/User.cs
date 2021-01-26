@@ -6,6 +6,7 @@ using static Freetime_Planner.Modes;
 using Newtonsoft.Json;
 using VkNet.Model.Template;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Freetime_Planner
 {
@@ -36,17 +37,23 @@ namespace Freetime_Planner
         /// </summary>
         public DateTime LastTime { get; set; }
 
+        /// <summary>
+        /// Словарь фильмов-рекомендаций, где ключ - это id фильма на Кинопоиске, а значение - объект класса FilmObject
+        /// </summary>
         public Dictionary<int, Film.FilmObject> FilmRecommendations { get; set; }
 
+        /// <summary>
+        /// Массив, состоящий из двух списков, элементы которых - объекты класса FilmObject. В первом списке вышедшие фильмы, во втором - не вышедвшие
+        /// </summary>
         public List<Film.FilmObject>[] PlannedFilms { get; set; }
         
-        public List<int> HiddenFilms { get; set; }
+        public HashSet<int> HiddenFilms { get; set; }
 
         public Dictionary<int, TV.TVObject> TVRecommendations { get; set; }
 
         public List<TV.TVObject> PlannedTV { get; set; }
 
-        public List<int> HiddenTV { get; set; }
+        public HashSet<int> HiddenTV { get; set; }
 
         /// <summary>
         /// Конструктор пользователя
@@ -62,10 +69,10 @@ namespace Freetime_Planner
             Level = new LinkedList<Mode>();
             Level.AddLast(Mode.Default);
             FilmRecommendations = new Dictionary<int, Film.FilmObject>();
-            HiddenFilms = new List<int>();
+            HiddenFilms = new HashSet<int>();
             PlannedFilms = new List<Film.FilmObject>[] { new List<Film.FilmObject>(), new List<Film.FilmObject>() };
             TVRecommendations = new Dictionary<int, TV.TVObject>();
-            HiddenTV = new List<int>();
+            HiddenTV = new HashSet<int>();
             PlannedTV = new List<TV.TVObject>();
         }
 
@@ -125,7 +132,7 @@ namespace Freetime_Planner
         /// <returns></returns>
         public MessageTemplate GetFilmRecommendations()
         {
-            return null;
+            return Keyboards.FilmMyRecommendations(FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
 
         /// <summary>
@@ -134,6 +141,8 @@ namespace Freetime_Planner
         /// <returns></returns>
         public string GetPlannedFilms()
         {
+            //TODO
+            //Замечание: использовать поле PlannedFilms
             return "<планируемые фильмы>";
         }
 
@@ -145,6 +154,12 @@ namespace Freetime_Planner
         /// <param name="Date"></param>
         public void AddPlannedFilm(string nameRu, string nameEn, string Date)
         {
+            Match m = Regex.Match(Date, @"(\d{4})-(\d{2})-(\d{2})");
+            var premiere = new DateTime(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value), int.Parse(m.Groups[3].Value));
+            if (DateTime.Now.CompareTo(premiere) < 0)
+                PlannedFilms[1].Add(new Film.FilmObject(nameRu, nameEn, Date));
+            else
+                PlannedFilms[0].Add(new Film.FilmObject(nameRu, nameEn, Date));
             UpdateFilmRecommendationsAsync(nameEn);
             return;
         }
@@ -160,15 +175,16 @@ namespace Freetime_Planner
         }
 
         /// <summary>
-        /// Добавляет фильм в черный список и удаляет его из рекомендаций, если он там есть
+        /// Добавляет фильм в черный список (HiddenFilms) и удаляет его из рекомендаций, если он там есть
         /// </summary>
         /// <param name="filmID"></param>
         public void HideFilm(int filmID)
         {
-            //также необходимо редактировать список рекомендаций
+            if (HiddenFilms.Add(filmID))
+                FilmRecommendations.Remove(filmID);
             return;
         }
-
+        /*
         /// <summary>
         /// Удаляет фильм из списка планируемых фильмов и добавляет его в черный список через вызов HideFilm()
         /// </summary>
@@ -180,7 +196,7 @@ namespace Freetime_Planner
             HideFilm(filmID);
             return;
         }
-
+        
         /// <summary>
         /// Возвращает информацию о фильме в текстовом виде по его ID
         /// </summary>
@@ -190,7 +206,7 @@ namespace Freetime_Planner
         {
             return null;
         }
-
+        */
         /// <summary>
         /// Асинхронно вызывает функцию UpdateFilmRecommendations
         /// </summary>
