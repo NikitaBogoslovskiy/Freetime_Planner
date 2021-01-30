@@ -46,7 +46,7 @@ namespace Freetime_Planner
         /// Массив, состоящий из двух списков, элементы которых - объекты класса FilmObject. В первом списке вышедшие фильмы, во втором - не вышедвшие
         /// </summary>
         public List<Film.FilmObject>[] PlannedFilms { get; set; }
-        
+
         public HashSet<int> HiddenFilms { get; set; }
 
         public Dictionary<int, TV.TVObject> TVRecommendations { get; set; }
@@ -141,9 +141,11 @@ namespace Freetime_Planner
         /// <returns></returns>
         public string GetPlannedFilms()
         {
-            //TODO
+            //Вышедшие / не вышедшие
+            string res = $"Вышедшие:\n{string.Join($"\n   ", PlannedFilms[0].Select(x => x.data.nameRu))}";
+            res += $"\nНевышедшие:\n{string.Join($"\n"   , PlannedFilms[1].Select(x => x.data.nameRu))}";
             //Замечание: использовать поле PlannedFilms
-            return "<планируемые фильмы>";
+            return res;
         }
 
         /// <summary>
@@ -213,7 +215,7 @@ namespace Freetime_Planner
         /// <param name="nameEn"></param>
         private async void UpdateFilmRecommendationsAsync(string nameEn)
         {
-            await Task.Run(()=> UpdateFilmRecommendations(nameEn));
+            await Task.Run(() => UpdateFilmRecommendations(nameEn));
         }
 
         /// <summary>

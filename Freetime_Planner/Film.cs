@@ -9,11 +9,16 @@ using static Freetime_Planner.Bot;
 using static Freetime_Planner.Modes.Mode;
 using System.Linq;
 using VkNet.Enums.SafetyEnums;
+using Newtonsoft.Json;
+using RestSharp;
+using System.Security.Claims;
 
 namespace Freetime_Planner
 {
     public static class Film
     {
+        public static string APIKey = "cfcf375a-ec0e-4bd3-9070-0c58fe97e43c";
+
         /// <summary>
         /// Вспомогательный класс для Data, хранящий стрну производства фильма
         /// </summary>
@@ -114,8 +119,13 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static string FullInfo(int filmID)
             {
-                //TODO
-                return null;
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/" + filmID.ToString());
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", APIKey);
+                IRestResponse response = client.Execute(request);
+
+                var pro = JsonConvert.DeserializeObject<FilmObject>(response.Content);
+                return FullInfo(pro);
                 //присвоить поля attachments и keyboard
             }
 
@@ -126,9 +136,56 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static string FullInfo(Film.FilmObject film)
             {
-                //TODO
-                return null;
+                Data filmData = film.data;
+
+                string res = $"Название: {filmData.nameRu} / {filmData.nameEn}\n" +
+                    $"Описание: {filmData.description}\n" +
+                    $"Жанры: {string.Join(", ", filmData.genres.Select(x => x.genre))}\n" +
+                    $"Год выпуска: {ConvertIntIntoEmojis(filmData.year)}\n" +
+                    $"Длительность: {ConvertIntIntoEmojis(':', filmData.filmLength)}\n" +
+                    $"Возрастное ограничение: {filmData.ratingAgeLimits}\n" +
+                    $"Ссылка: {filmData.webUrl}\n";
+
+                return res;
             }
+
+            #region Методы для превращения цифр в эмодзи
+
+            /// Реверсирует int
+            private static int ReverseInt(int num)
+            {
+                int reverse = 0;
+                while (num != 0)
+                {
+                    int digit = num % 10;
+                    reverse = reverse * 10 + digit;
+                    num /= 10;
+                }
+                return reverse;
+            }
+
+            private static string ConvertIntIntoEmojis(string value)
+            {
+                string result = "";
+                int reversedValue = ReverseInt(int.Parse(value));
+                while (reversedValue != 0)
+                {
+                    int digit = reversedValue % 10;
+                    result += digit.ToString() + "&#8419;";
+                    reversedValue /= 10;
+                }
+                return result;
+            }
+
+            private static string ConvertIntIntoEmojis(char separator, string value)
+            {
+                string result = "";
+                string[] tempStrs = value.Split(separator);
+
+                result += ConvertIntIntoEmojis(tempStrs[0]) + "&#10135;" + ConvertIntIntoEmojis(tempStrs[1]);
+                return result;
+            }
+            #endregion
 
             /// <summary>
             /// Возвращает карусель из фильмов, которые были получены в результате поиска фильма по названию (используется класс FilmResults)
@@ -137,9 +194,14 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static MessageTemplate Search(string filmName)
             {
-                FilmResults.Results results = null; 
-                //TODO
-                return Keyboards.FilmResults(results);
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", APIKey);
+                request.AddQueryParameter("keyword", filmName);
+                IRestResponse response = client.Execute(request);
+                FilmResults.Results pro = JsonConvert.DeserializeObject<FilmResults.Results>(response.Content);
+
+                return Keyboards.FilmResults(pro);
             }
 
             /// <summary>
@@ -148,8 +210,22 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static MessageTemplate Random()
             {
-                RandomFilms.Results results = null; 
-                //TODO
+                RandomFilms.Results results = null;
+
+                Random random = new Random();
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.AddYears(-6).Year);
+                int filmYearUpperLine = random.Next(filmYearBottomLine + 5, DateTime.Now.Year);
+                int filmRatingBottomLine = random.Next(4, 7);
+
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", APIKey);
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                request.AddQueryParameter("ratingFrom", filmRatingBottomLine.ToString());
+                IRestResponse response = client.Execute(request);
+
+                results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
                 return Keyboards.RandomFilmResults(results);
             }
 
