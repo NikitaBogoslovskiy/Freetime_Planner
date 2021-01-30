@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using VkNet.Model.Template;
 using System.Threading.Tasks;
 using System.Linq;
+using RestSharp;
 
 namespace Freetime_Planner
 {
@@ -68,7 +69,7 @@ namespace Freetime_Planner
             ID = id;
             Level = new LinkedList<Mode>();
             Level.AddLast(Mode.Default);
-            FilmRecommendations = new Dictionary<int, Film.FilmObject>();
+            FilmRecommendations = Film.PopularFilms;
             HiddenFilms = new HashSet<int>();
             PlannedFilms = new List<Film.FilmObject>[] { new List<Film.FilmObject>(), new List<Film.FilmObject>() };
             TVRecommendations = new Dictionary<int, TV.TVObject>();
@@ -156,14 +157,26 @@ namespace Freetime_Planner
         /// <param name="Date"></param>
         public void AddPlannedFilm(string nameRu, string nameEn, string Date)
         {
-            Match m = Regex.Match(Date, @"(\d{4})-(\d{2})-(\d{2})");
-            var premiere = new DateTime(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value), int.Parse(m.Groups[3].Value));
+            var premiere = StringToDate(Date);
             if (DateTime.Now.CompareTo(premiere) < 0)
                 PlannedFilms[1].Add(new Film.FilmObject(nameRu, nameEn, Date));
             else
                 PlannedFilms[0].Add(new Film.FilmObject(nameRu, nameEn, Date));
+            Users.Unload();
             UpdateFilmRecommendationsAsync(nameEn);
-            return;
+        }
+
+        /// <summary>
+        /// Обновляет список планируемых фильмов с учетом сегодняшней даты (замечание: после обновления поля PlannedFilms список пользователей не выгружается)
+        /// </summary>
+        public void UpdatePlannedFilms()
+        {
+            var dict = new SortedDictionary<DateTime, Film.FilmObject>();
+            foreach (var film in PlannedFilms[1])
+                dict[StringToDate(film.data.premiereRu)] = film;
+            int count = dict.Count(kv => DateTime.Now.CompareTo(kv.Key) > 0);
+            PlannedFilms[0].AddRange(dict.Take(count).Select(kv => kv.Value));
+            PlannedFilms[1] = dict.Skip(count).Select(kv => kv.Value).ToList();
         }
 
         /// <summary>
@@ -184,7 +197,27 @@ namespace Freetime_Planner
         {
             if (HiddenFilms.Add(filmID))
                 FilmRecommendations.Remove(filmID);
-            return;
+            if (FilmRecommendations.Count < 6)
+                IncRecommendedFilmsAsync();
+            Users.Unload();
+        }
+        /// <summary>
+        /// Добавляет популярные фильмы в список рекомендуемых фильмов асинхронно
+        /// </summary>
+        private async void IncRecommendedFilmsAsync()
+        {
+            await Task.Run(() => IncRecommendedFilms());
+        }
+        /// <summary>
+        /// Добавляет популярные фильмы в список рекомендуемых фильмов синхронно
+        /// </summary>
+        private void IncRecommendedFilms()
+        {
+            Parallel.ForEach(Film.PopularFilms, (kv) =>
+            {
+                FilmRecommendations.Add(kv.Key, kv.Value);
+            });
+            Users.Unload();
         }
         /*
         /// <summary>
@@ -224,7 +257,71 @@ namespace Freetime_Planner
         /// <param name="nameEn"></param>
         private void UpdateFilmRecommendations(string nameEn)
         {
+            //урезание списка рекомендаций, чтобы после добавления новых рекомендаций количество элементов в нем не превышало 50
+            int difference = FilmRecommendations.Count - 45;
+            var new_array = FilmRecommendations.OrderBy(kv => kv.Value.Priority).Skip(difference).ToDictionary(kv => kv.Key, kv => kv.Value);
 
+            //поиск фильма в англоязычной базе данных с целью получения его ID
+            var client1 = new RestSharp.RestClient("https://api.themoviedb.org/3/search/movie");
+            var request1 = new RestRequest(Method.GET);
+            request1.AddQueryParameter("api_key", Bot._mdb_key);
+            request1.AddQueryParameter("query", nameEn);
+            IRestResponse response1 = client1.Execute(request1);
+            string id = JsonConvert.DeserializeObject<MDBResults>(response1.Content).results.First().id.ToString();
+
+            //поиск в англоязычной базе данных рекомендуемых фильмов к данному, используя ID данного фильма
+            var client2 = new RestSharp.RestClient($"https://api.themoviedb.org/3/movie/{id}/recommendations");
+            var request2 = new RestRequest(Method.GET);
+            request2.AddQueryParameter("api_key", Bot._mdb_key);
+            IRestResponse response2 = client2.Execute(request2);
+            string[] names = JsonConvert.DeserializeObject<MDBResults>(response2.Content).results.Select(film => film.title).ToArray();
+
+            int count = 0;
+            Parallel.ForEach(names, (name, state) =>
+            {
+                //добавляем только пять фильмов
+                if (count > 5)
+                    state.Break();
+
+                //поиск рекомендуемого фильма по его названию на Кинопоиске с целью получения его ID
+                var KPclient1 = new RestSharp.RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
+                var KPrequest1 = new RestRequest(Method.GET);
+                KPrequest1.AddHeader("X-API-KEY", Bot._kp_key);
+                KPrequest1.AddHeader("accept", "application/json");
+                KPrequest1.AddQueryParameter("keyword", name);
+                IRestResponse KPresponse1 = KPclient1.Execute(KPrequest1);
+                var deserialized = JsonConvert.DeserializeObject<FilmResults.Results>(KPresponse1.Content);
+
+                //проверка успешности десериализации
+                if (deserialized.pagesCount > 0)
+                {
+                    int id = 0;
+                    //проверка, чтобы найденный фильм не был сериалом, не входил в список рекомендаций и не содержался в HiddenFilms
+                    foreach (var f in deserialized.films)
+                        if (!f.nameRu.EndsWith("(сериал)") && !new_array.ContainsKey(f.filmId) && !HiddenFilms.Contains(id))
+                        {
+                            id = f.filmId;
+                            break;
+                        }
+                    //поиск фильма по выбранному ID
+                    var KPclient2 = new RestSharp.RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{id}");
+                    var KPrequest2 = new RestRequest(Method.GET);
+                    KPrequest2.AddHeader("X-API-KEY", Bot._kp_key);
+                    KPrequest1.AddHeader("accept", "application/json");
+                    IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
+                    var film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content);
+                    film.Priority = 2;
+                    film.data.VKPhotoID = Attachments.FilmObjectPosterID(film);
+                    //проверка валидности изображения
+                    if (film.data.VKPhotoID != null)
+                    {
+                        new_array[id] = film;
+                        count++;
+                    }
+                }
+            });
+            FilmRecommendations = new_array;
+            Users.Unload();
         }
 
         //--------------Пользовательские методы для сериалов--------------
@@ -277,7 +374,39 @@ namespace Freetime_Planner
         {
 
         }
+
+
+        //-----------------------------------Другие функции--------------------------------------
+        /// <summary>
+        /// Возвращает последовательность значений словаря в случайном порядке
+        /// </summary>
+        /// <typeparam name="TKey"></typeparam>
+        /// <typeparam name="TValue"></typeparam>
+        /// <param name="dict"></param>
+        /// <returns></returns>
+        public IEnumerable<TValue> RandomValues<TKey, TValue>(IDictionary<TKey, TValue> dict)
+        {
+            Random rand = new Random();
+            List<TValue> values = Enumerable.ToList(dict.Values);
+            int size = dict.Count;
+            while (true)
+            {
+                yield return values[rand.Next(size)];
+            }
+        }
+
+        /// <summary>
+        /// Конвертирует текстовую дату в дату формата DateTime
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        public static DateTime StringToDate(string date)
+        {
+            Match m = Regex.Match(date, @"(\d{4})-(\d{2})-(\d{2})");
+            return new DateTime(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value), int.Parse(m.Groups[3].Value));
+        }
     }
+
 
     /// <summary>
     /// класс объекта типа Message.Payload
@@ -290,6 +419,7 @@ namespace Freetime_Planner
         public string filmId { get; set; }
         public string date { get; set; }
         public string genres { get; set; }
+        public string digital_release { get; set; }
 
         public Payload(string payload)
         {
@@ -298,12 +428,13 @@ namespace Freetime_Planner
             text = Regex.Match(payload, "{\\\".*\\\" *: *\\\"(.*)\\\"}").Groups[1].Value;
             if (!text.Contains(';'))
                 return;
-            GroupCollection m = Regex.Match(text, "(.*);(.*);(.*);(.*);(.*)").Groups;
+            GroupCollection m = Regex.Match(text, "(.*);(.*);(.*);(.*);(.*);(.*)").Groups;
             nameRu = m[1].Value;
             nameEn = m[2].Value;
             filmId = m[3].Value;
             date = m[4].Value;
             genres = m[5].Value;
+            digital_release = m[6].Value;
         }
 
         //public static string PayloadValue(string payload) => payload == null ? "" : Regex.Match(payload, "{\\\".*\\\" *: *\\\"(.*)\\\"").Groups[1].Value; //JsonConvert.DeserializeObject<Payload>(payload).text;

@@ -7,7 +7,7 @@ namespace Freetime_Planner
     public static class Modes
     {
         public enum Mode { Default, Film, TV, Food, Search, Recommendations, PlanToWatch, Random, Dessert,
-            Snack, Cocktails, WantToWatch, Watched, Soundtrack, GenreFood, BlackList, More, AlreadyWatched, Yes, No, Back, Help } 
+            Snack, Cocktails, WantToWatch, Watched, Soundtrack, GenreFood, BlackList, More, AlreadyWatched, Yes, No, Back, Help, WhereToWatch } 
 
         /// <summary>
         /// Конвертер текстовой команды из главного меню в объект типа Mode
@@ -46,7 +46,7 @@ namespace Freetime_Planner
                 case "Хочу посмотреть": return Mode.WantToWatch;
                 case "Посмотрел": return Mode.Watched;
                 case "Саундтрек": return Mode.Soundtrack;
-                case "Что поесть": return Mode.GenreFood;
+                case "Еда": return Mode.GenreFood;
                 case "Не показывать": return Mode.BlackList;
                 case "Подробнее": return Mode.More;
                 case "Уже посмотрел": return Mode.AlreadyWatched;
@@ -54,6 +54,7 @@ namespace Freetime_Planner
                 case "Нет": return Mode.No;
                 case "Помощь": return Mode.Help;
                 case "Назад": return Mode.Back;
+                case "Где посмотреть": return Mode.WhereToWatch;
                 default: throw new ArgumentException("Нажимай кнопки в меню");
             }
         }

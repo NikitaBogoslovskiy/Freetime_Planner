@@ -36,7 +36,14 @@ namespace Freetime_Planner
         /// </summary>
         public static void Unload()
         {
-            File.WriteAllText(users_path, JsonConvert.SerializeObject(Users_Dict));
+            try
+            {
+                File.WriteAllText(users_path, JsonConvert.SerializeObject(Users_Dict));
+            }
+            catch(System.IO.IOException)
+            {
+                File.WriteAllText(users_path, JsonConvert.SerializeObject(Users_Dict));
+            }
         }
 
         /// <summary>

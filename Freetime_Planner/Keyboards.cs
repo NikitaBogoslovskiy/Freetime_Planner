@@ -13,6 +13,7 @@ using static Freetime_Planner.Film;
 using static Freetime_Planner.TV;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Freetime_Planner
 {
@@ -68,6 +69,8 @@ namespace Freetime_Planner
             return button.Build();
         }
 
+        #region Film
+
         //Фильмы
         /// <summary>
         /// Создаёт Клавиатуру для кнопоки "Фильмы" (Build MessageKeyboard for button "Фильмы")
@@ -98,26 +101,29 @@ namespace Freetime_Planner
  
         }
 
-        #region Film
         /// <summary>
         /// Создаёт клавиатуру в сообщении для кнопоки "Фильмы"->"Поиск по названию"  
         /// </summary>
         /// <button></button>
-        public static MessageKeyboard FilmSearch(string nameRu, string nameEn, string filmID, string date, string genres)
+        public static MessageKeyboard FilmSearch(string nameRu, string nameEn, string filmID, string date, string genres, string digital_release)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
 
             button.Clear();
 
-            button.AddButton("Хочу посмотреть", $"{nameRu};{nameEn};{filmID};{date};{genres}", Primary, "text");
+            button.AddButton("Хочу посмотреть", $"{nameRu};{nameEn};;{date};;", Primary, "text");
             button.AddLine();
-            button.AddButton("Посмотрел", $"{nameRu};{nameEn};{filmID};{date};{genres}", Primary, "text");
+            button.AddButton("Посмотрел", $";{nameEn};{filmID};;;", Primary, "text");
             button.AddLine();
-            button.AddButton("Саундтрек", $"{nameRu};{nameEn};{filmID};{date};{genres}", Primary, "text");
+            if (ServiceClass.service_data.google_requests <= 100 && digital_release != null && DateTime.Now.CompareTo(User.StringToDate(digital_release)) >= 0)
+            {
+                button.AddButton("Где посмотреть", $"{nameRu};;;{date};;{digital_release}", Primary, "text");
+                button.AddLine();
+            }
+            button.AddButton("Саундтрек", $"{nameRu};{nameEn};;{date};;", Primary, "text");
+            button.AddButton("Еда", $";;;;{genres};", Primary, "text");
             button.AddLine();
-            button.AddButton("Что поесть", $"{nameRu};{nameEn};{filmID};{date};{genres}", Primary, "text");
-            button.AddLine();
-            button.AddButton("Не показывать", $"{nameRu};{nameEn};{filmID};{date};{genres}", Negative, "text");
+            button.AddButton("Не показывать", $";;{filmID};;;", Negative, "text");
 
             button.SetInline();
             return button.Build();
@@ -135,10 +141,10 @@ namespace Freetime_Planner
             var carousel = new MessageTemplate();
             carousel.Type = Carousel;
             var arr = new List<CarouselElement>();
-            Parallel.ForEach(farray, (film) =>
+            foreach(var f in farray)
             {
-                arr.Add(CarouselFilm(film));
-            });
+                arr.Add(CarouselFilm(f));
+            }
             carousel.Elements = arr;
 
             return carousel;
@@ -153,7 +159,7 @@ namespace Freetime_Planner
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', film.data.genres.Select(g => g.genre));
-            button.AddButton("Подробнее", $"{film.data.nameRu};{film.data.nameEn};{film.data.filmId};{film.data.premiereRu ?? film.data.premiereWorld};{genres}", Positive, "text");
+            button.AddButton("Подробнее", $";;{film.data.filmId};;;", Positive, "text");
             var element = new CarouselElement();
             element.Title = film.data.nameRu;
             element.Description = genres.Replace("*", ", ");
@@ -190,7 +196,7 @@ namespace Freetime_Planner
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', film.genres.Select(g => g.genre));
-            button.AddButton("Подробнее", $"{film.nameRu};{film.nameEn};{film.filmId};{film.year};{genres}", Positive, "text");
+            button.AddButton("Подробнее", $";;{film.filmId};;;", Positive, "text");
             var element = new CarouselElement();
             element.Title = film.nameRu;
             element.Description = genres.Replace("*", ", ");
@@ -227,7 +233,7 @@ namespace Freetime_Planner
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', film.genres.Select(g => g.genre));
-            button.AddButton("Подробнее", $"{film.nameRu};{film.nameEn};{film.filmId};{film.year};{genres}", Positive, "text");
+            button.AddButton("Подробнее", $";;{film.filmId};;;", Positive, "text");
             var element = new CarouselElement();
             element.Title = film.nameRu;
             element.Description = genres.Replace("*", ", ");
@@ -253,15 +259,37 @@ namespace Freetime_Planner
         ///  "Фильмы"->"Рандомный фильм"
         /// </summary>
         /// <returns></returns>
-        public static MessageKeyboard RandomFilm(string nameRu, string nameEn, string filmID, string date, string genres)
+        public static MessageKeyboard RandomFilm(string nameRu, string nameEn, string filmID, string date, string genres, string digital_release)
         {
-            return FilmSearch(nameRu, nameEn, filmID, date, genres);
+            return FilmSearch(nameRu, nameEn, filmID, date, genres, digital_release);
         }
 
+        public static MessageKeyboard ServiceLinks(Dictionary<string, string> dict)
+        { 
+            var kb = new Keyboard(dict);
+            return JsonConvert.DeserializeObject<MessageKeyboard>(JsonConvert.SerializeObject(kb));
+        }
 
+        /// <summary>
+        /// Клавиатура в сообщении для кнопки "Просмотрел"
+        /// </summary>
+        /// <returns></returns>
+        public static MessageKeyboard FilmWatched(string nameEn)
+        {
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            button.Clear();
+
+            button.AddButton("Да", $";{nameEn};;;;", Positive, "text");
+            //button.AddLine();
+            button.AddButton("Нет", $";{nameEn};;;;", Negative, "text");
+
+            button.SetInline();
+            return button.Build();
+        }
 
         #endregion
 
+        #region TV
 
         //Сериалы
         /// <summary>
@@ -291,8 +319,6 @@ namespace Freetime_Planner
             return button.Build();
         }
 
-        #region TV
-
         /// <summary>
         ///Создаёт клавиатуру в сообщении для кнопоки "Сериалы"->"Поиск по названию"  
         /// </summary>
@@ -303,15 +329,15 @@ namespace Freetime_Planner
 
             button.Clear();
 
-            button.AddButton("Хочу посмотреть", $"{nameRu};{nameEn};{filmID};;{genres}", Primary, "text");
+            button.AddButton("Хочу посмотреть", $"{nameRu};{nameEn};{filmID};;{genres};", Primary, "text");
             button.AddLine();
-            button.AddButton("Посмотрел", $"{nameRu};{nameEn};{filmID};;{genres}", Primary, "text");
+            button.AddButton("Посмотрел", $"{nameRu};{nameEn};{filmID};;{genres};", Primary, "text");
             button.AddLine();
-            button.AddButton("Саундтрек", $"{nameRu};{nameEn};{filmID};;{genres}", Primary, "text");
+            button.AddButton("Саундтрек", $"{nameRu};{nameEn};{filmID};;{genres};", Primary, "text");
             button.AddLine();
-            button.AddButton("Что поесть", $"{nameRu};{nameEn};{filmID};;{genres}", Primary, "text");
+            button.AddButton("Что поесть", $"{nameRu};{nameEn};{filmID};;{genres};", Primary, "text");
             button.AddLine();
-            button.AddButton("Не показывать", $"{nameRu};{nameEn};{filmID};;{genres}", Negative, "text");
+            button.AddButton("Не показывать", $"{nameRu};{nameEn};{filmID};;{genres};", Negative, "text");
 
             button.SetInline();
             return button.Build();
@@ -336,7 +362,7 @@ namespace Freetime_Planner
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', tv.data.genres.Select(g => g.genre));
-            button.AddButton("Подробнее", $"{tv.data.nameRu};{tv.data.nameEn};{tv.data.filmId};;{genres}", Positive, "text");
+            button.AddButton("Подробнее", $"{tv.data.nameRu};{tv.data.nameEn};{tv.data.filmId};;{genres};", Positive, "text");
             var element = new CarouselElement();
             element.Title = tv.data.nameRu;
             element.Description = genres.Replace("*", ", ");
@@ -362,7 +388,7 @@ namespace Freetime_Planner
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', film.genres.Select(g => g.genre));
-            button.AddButton("Подробнее", $"{film.nameRu};{film.nameEn};{film.filmId};;{genres}", Positive, "text");
+            button.AddButton("Подробнее", $"{film.nameRu};{film.nameEn};{film.filmId};;{genres};", Positive, "text");
             var element = new CarouselElement();
             element.Title = film.nameRu;
             element.Description = genres.Replace("*", ", ");
@@ -389,7 +415,7 @@ namespace Freetime_Planner
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', film.genres.Select(g => g.genre));
-            button.AddButton("Подробнее", $"{film.nameRu};{film.nameEn};{film.filmId};;{genres}", Positive, "text");
+            button.AddButton("Подробнее", $"{film.nameRu};{film.nameEn};{film.filmId};;{genres};", Positive, "text");
             var element = new CarouselElement();
             element.Title = film.nameRu;
             element.Description = genres.Replace("*", ", ");
@@ -423,26 +449,6 @@ namespace Freetime_Planner
             return TVSearch(nameRu, nameEn, filmID, genres);
         }
 
-        #endregion
-
-
-        /// <summary>
-        /// Клавиатура в сообщении для кнопки "Просмотрел"
-        /// </summary>
-        /// <returns></returns>
-        public static MessageKeyboard FilmWatched(string nameRu, string nameEn, string filmID, string date, string genres)
-        {
-            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
-            button.Clear();
-
-            button.AddButton("Да", $"{nameRu};{nameEn};{filmID};{date};{genres}", Positive, "text");
-            //button.AddLine();
-            button.AddButton("Нет", $"{nameRu};{nameEn};{filmID};{date};{genres}", Negative, "text");
-
-            button.SetInline();
-            return button.Build();
-        }
-
         /// <summary>
         /// Клавиатура в сообщении для кнопки "Просмотрел"
         /// </summary>
@@ -460,6 +466,8 @@ namespace Freetime_Planner
             return button.Build();
         }
 
+        #endregion
+
         public static void Init()
         {
             MainKeyboard = MainMenu();
@@ -469,4 +477,52 @@ namespace Freetime_Planner
         }
 
     }
+
+
+    #region ServiceLinksKeyboard
+
+    public class Keyboard
+    {
+        public bool one_time = false;
+        public List<List<object>> buttons = new List<List<object>>();
+        public bool inline = true;
+        public Keyboard(Dictionary<string, string> dict)
+        {
+            foreach (var kv in dict)
+            {
+                Button button = new Button(kv.Key, kv.Value);
+                buttons.Add(new List<object>() { button });
+            }
+        }
+
+
+    }
+    public class Button
+    {
+        public Action action;
+        public string color;
+        public Button(string name, string link)
+        {
+            color = null;
+            action = new Action(name, link);
+        }
+
+    }
+    public class Action
+    {
+        public string type;
+        public string payload;
+        public string label;
+        public string link;
+        public Action(string name, string link)
+        {
+            type = "open_link";
+            label = name;
+            this.link = link;
+            payload = "";
+        }
+
+    }
+
+    #endregion 
 }

@@ -23,7 +23,9 @@ using VkNet.Model.Keyboard;
 using static Freetime_Planner.Modes;
 using VkNet.Model.Template;
 using VkNet.Enums.SafetyEnums;
-
+using VkNet.AudioBypassService.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using Yandex.Music.Api;
 
 namespace Freetime_Planner
 {
@@ -49,6 +51,11 @@ namespace Freetime_Planner
         public static VkApi private_vkapi;
 
         /// <summary>
+        /// Объект для работы с Яндекс.Музыка
+        /// </summary>
+        public static YandexMusicApi yandex_api;
+
+        /// <summary>
         /// Поле, хранящее токен авторизации бота
         /// </summary>
         public static string _access_token;
@@ -59,10 +66,63 @@ namespace Freetime_Planner
         public static string _private_access_token;
 
         /// <summary>
+        /// Поле, хранящее логин к аккаунту в Яндексе
+        /// </summary>
+        public static string _yandex_login;
+
+        /// <summary>
+        /// Поле, хранящее пароль к аккаунту в Яндексе
+        /// </summary>
+        public static string _yandex_password;
+
+        /// <summary>
+        /// Поле, хранящее логин к аккаунту в ВКонтакте
+        /// </summary>
+        public static string _vk_login;
+
+        /// <summary>
+        /// Поле, хранящее пароль к аккаунту в ВКонтакте
+        /// </summary>
+        public static string _vk_password;
+
+        /// <summary>
+        /// Поле, хранящее ключ доступа к англоязычной базе данных с фильмами
+        /// </summary>
+        public static string _mdb_key;
+
+        /// <summary>
+        /// Поле, хранящее ключ доступа к Кинопоиску
+        /// </summary>
+        public static string _kp_key;
+
+        /// <summary>
+        /// Поле, хранящее ключ доступа к API Youtube
+        /// </summary>
+        public static string _youtube_key;
+
+        /// <summary>
+        /// Поле, хранящее ключ доступа к API Google
+        /// </summary>
+        public static string _google_key;
+
+        /// <summary>
+        /// Поле, хранящее id поисковой системы Google
+        /// </summary>
+        public static string _google_sid;
+
+        /// <summary>
         /// ID альбома в Вконтакте, в котором размещены служебные изображения
         /// </summary>
         public static long album_id = 277695979;
 
+        /// <summary>
+        /// ID альбома в Вконтакте, в котором размещены постеры популярных фильмов
+        /// </summary>
+        public static long album_id_popular = 278759103;
+
+        /// <summary>
+        /// ID группы ВКонтакте
+        /// </summary>
         public static long group_id = 199604726;
 
         /// <summary>
@@ -90,6 +150,16 @@ namespace Freetime_Planner
         /// </summary>
         public static List<MediaAttachment> attachments;
 
+        /// <summary>
+        /// Текст капчи, который ввел пользователь
+        /// </summary>
+        public static string captcha_key;
+
+        /// <summary>
+        /// ID капчи, которая была отправлена пользователю
+        /// </summary>
+        public static long? captcha_sid;
+
         //Функции региона MainArea
 
         /// <summary>
@@ -99,11 +169,15 @@ namespace Freetime_Planner
         {
             Init();
             Users.Upload();
+            WritelnColor("Пользователи загружены", ConsoleColor.Green);
             AccessTokens.Upload();
+            WritelnColor("Токены и ключи доступа загружены", ConsoleColor.Green);
             Keyboards.Init();
-            InitResetTimer();
-            //Movie.InitFilms();
-            //TV.InitSeries();
+            WritelnColor("Клавиатуры инициализированы", ConsoleColor.Green);
+            ServiceClass.UploadServiceData();
+            WritelnColor("Сервисные данные загружены", ConsoleColor.Green);
+            Food.UploadGenreFood();
+            WritelnColor("Файл с жанрами и едой загружен", ConsoleColor.Green);
         }
 
         /// <summary>
@@ -114,7 +188,10 @@ namespace Freetime_Planner
             Title = "Freetime Planner";
             WritelnColor("Bot", ConsoleColor.Yellow);
             vkapi = new VkApi();
-            private_vkapi = new VkApi();
+            var service = new ServiceCollection();
+            service.AddAudioBypass();
+            private_vkapi = new VkApi(service);
+            yandex_api = new YandexMusicApi();
         }
 
         /// <summary>
@@ -128,7 +205,18 @@ namespace Freetime_Planner
             {
                 WritelnColor("Попытка авторизации...", ConsoleColor.White);
                 vkapi.Authorize(new ApiAuthParams { AccessToken = _access_token });
-                private_vkapi.Authorize(new ApiAuthParams { AccessToken = _private_access_token });
+                private_vkapi.Authorize(new ApiAuthParams {
+                    Login = _vk_login,
+                    Password = _vk_password
+                });
+                yandex_api.Authorize(_yandex_login, _yandex_password);
+
+                WritelnColor("Загрузка популярных фильмов...", ConsoleColor.White);
+                Film.UploadPopularFilms();
+                WritelnColor("Список популярных фильмов загружен", ConsoleColor.Green);
+                InitTimers();
+                WritelnColor("Таймеры запущены", ConsoleColor.Green);
+
                 Start();
                 return true;
             }
@@ -179,7 +267,7 @@ namespace Freetime_Planner
                     RandomId = DateTime.Now.Millisecond,
                     Keyboard = keyboard,
                     Template = template,
-                    Attachments = null//attachments
+                    Attachments = attachments
                 });
                 WriteLine($"Успешно отправлен ответ: {message}");
                 Console.Beep();
@@ -485,7 +573,7 @@ namespace Freetime_Planner
                                 //"Посмотрел"
                                 case Watched:
                                     user.HideFilm(int.Parse(p.filmId));
-                                    keyboard = Keyboards.FilmWatched(p.nameRu, p.nameEn, p.filmId, p.date, p.genres);
+                                    keyboard = Keyboards.FilmWatched(p.nameEn);
                                     SendMessage("Понравился фильм?");
                                     keyboard = null;
                                     user.RemoveLevel();
@@ -500,16 +588,25 @@ namespace Freetime_Planner
 
                                 //"Саундтрек"
                                 case Soundtrack:
-                                    attachments = Film.Methods.Soundtrack(p.nameRu).Select(a => a as MediaAttachment).ToList();
-                                    SendMessage("Саундтрек к кинофильму");
+                                    SendMessage("Собираю трек-лист...");
+                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                    List<Audio> audios = new List<Audio>();
+                                    if (!Film.Methods.Soundtrack(p.nameEn ?? p.nameRu, p.date.Substring(0, 4), audios))
+                                    {
+                                        SendMessage("К сожалению, для этого фильма я не смог ничего найти... 😔");
+                                        break;
+                                    }
+                                    attachments = audios.Select(a => a as MediaAttachment).ToList();
+                                    SendMessage("");
                                     attachments = null;
                                     user.RemoveLevel();
                                     break;
 
-                                //"Что поесть"
+                                //"Еда"
                                 case GenreFood:
+                                    SendMessage("Подбираю блюдо для данного фильма...");
                                     attachments = new List<MediaAttachment> { Film.Methods.Food(p.genres.Split('*')) as MediaAttachment };
-                                    SendMessage("Видео-инструкция приготовления несложного блюда");
+                                    SendMessage("");
                                     attachments = null;
                                     user.RemoveLevel();
                                     break;
@@ -523,10 +620,12 @@ namespace Freetime_Planner
 
                                 //"Подробнее"
                                 case More:
+                                    SendMessage("Готовлю детали по фильму...");
+                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
                                     if (user.FilmRecommendations.TryGetValue(int.Parse(p.filmId), out Film.FilmObject film))
                                     {
                                         attachments = new List<MediaAttachment> { Attachments.PosterObject(film.data.posterUrl, film.data.filmId.ToString()) }; //скачать изображение
-                                        keyboard = Keyboards.FilmSearch(p.nameRu, p.nameEn, p.filmId, p.date, p.genres);
+                                        keyboard = Keyboards.FilmSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), film.data.premiereRu ?? film.data.premiereWorld, string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereDigital ?? film.data.premiereDvd);
                                         SendMessage(Film.Methods.FullInfo(film));
                                     }
                                     else
@@ -557,6 +656,19 @@ namespace Freetime_Planner
                                     user.RemoveLevel();
                                     break;
 
+                                //"Где посмотреть"
+                                case WhereToWatch:
+                                    if (ServiceClass.service_data.google_requests < 100)
+                                    {
+                                        SendMessage("Ищу места для просмотра фильма...");
+                                        keyboard = Film.Methods.ServiceLinks(p.nameRu, p.date, p.digital_release);
+                                        SendMessage("Жми любую кнопку и смотри!");
+                                        keyboard = null;
+                                    }
+                                    else
+                                        SendMessage("К сожалению, я не смог найти места для просмотра... 😔");
+                                    break;
+
                                 default:
                                     break;
                             }
@@ -574,6 +686,7 @@ namespace Freetime_Planner
 
                                 //"Мои рекомендации"
                                 case Recommendations:
+                                    SendMessage("Составляю список рекомендаций...");
                                     //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
                                     template = user.GetFilmRecommendations();                                  
                                     keyboard = null;
@@ -748,20 +861,23 @@ namespace Freetime_Planner
                         switch (user.CurrentLevel())
                         {
                             case Snack:
+                                SendMessage("Подбираю закуску...");
                                 attachments = new List<MediaAttachment> { Food.Snack() as MediaAttachment };
-                                SendMessage("Видео-инструкция по приготовлению закуски");
+                                SendMessage("");
                                 attachments = null;
                                 break;
 
                             case Dessert:
+                                SendMessage("Подбираю десерт...");
                                 attachments = new List<MediaAttachment> { Food.Dessert() as MediaAttachment };
-                                SendMessage("Видео-инструкция по приготовлению десерта");
+                                SendMessage("");
                                 attachments = null;
                                 break;
 
                             case Cocktails:
+                                SendMessage("Подбираю коктейль...");
                                 attachments = new List<MediaAttachment> { Food.Cocktail() as MediaAttachment };
-                                SendMessage("Видео-инструкция по приготовлению коктейля");
+                                SendMessage("");
                                 attachments = null;
                                 break;
 
@@ -815,7 +931,7 @@ namespace Freetime_Planner
                                 }
                                 user.HideFilm(film.data.filmId);
                                 SendMessage("Фильм перенесен в список просмотренных");
-                                keyboard = Keyboards.FilmWatched(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), film.data.premiereRu ?? film.data.premiereWorld, string.Join('*', film.data.genres.Select(g => g.genre)));
+                                keyboard = Keyboards.FilmWatched(film.data.nameEn);
                                 SendMessage("Понравился фильм?");
                                 keyboard = null;
                                 break;
@@ -869,46 +985,97 @@ namespace Freetime_Planner
         }
         #endregion
 
-        /*В этом регионе создается таймер, который переводит пользователя в состояние по умолчанию, 
-          если он бездействует больше, чем определенное время*/
-        #region ResetTimer
+        //Регион, где создаются таймеры
+        #region Timers
 
         public static Timer ResetTimer;
-        public int interval = 60000; //1 минута - интервал проверки бездействия пользователя
-        public long reset_time = 600000; //10 минут - критическое время бездействия
+        public static int RTinterval = 60000; //1 минута - интервал проверки бездействия пользователя
+        public static long reset_time = 600000; //10 минут - критическое время бездействия
         public static object synclock = new object();
 
+        public static Timer PopularFilmsTimer;
+        public static int PFTinterval = 86400000; //24 часа - интервал проверки 
+        public static int update_time = 7; //7 дней - срок, после которого обновляются популярные фильмы
+        public static object PFTsynclock = new object();
+
+        public static Timer PlannedFilmsTimer;
+        public static int PlFTinterval = 3600000; //1 час - интервал проверки 
+        public static int day_time = 0; //0 - час в сутках, в который обновляются планируемые фильмы (т.е. в диапозоне 0:00-0:59)
+        public static object PlFTsynclock = new object();
+
         /// <summary>
-        /// Инициализация таймера, который каждый интервал времени из поля interval выполняет функцию Reset
+        /// Инициализация таймеров
         /// </summary>
-        public void InitResetTimer()
+        public static void InitTimers()
         {
-            ResetTimer = new Timer(new TimerCallback(Reset), null, 0, interval);
+            ResetTimer = new Timer(new TimerCallback(Reset), null, 0, RTinterval); //таймер, вызывающий каждый интервал времени RTinterval функцию Reset
+            PopularFilmsTimer = new Timer(new TimerCallback(RegularPopularFilmsUpdating), null, 0, PFTinterval); //таймер, вызывающий каждый интервал времени PFTinterval функцию RegularPopularFilmsUpdating
+            PlannedFilmsTimer = new Timer(new TimerCallback(DailyPlannedFilmsUpdating), null, 0, PlFTinterval); //таймер, вызывающий каждый интервал времени PlFTinterval функцию DailyPlannedFilmsUpdating
         }
 
         /// <summary>
         /// Функция, вызывающая функцию ResetLevel в случае, если истекло время из поля reset_time
         /// </summary>
         /// <param name="obj"></param>
-        public void Reset(object obj)
+        public static void Reset(object obj)
         {
             lock(synclock)
             {
                 foreach(var pair in Users.Users_Dict)
                 {
-                    if (TimeIsUp(pair.Value) && pair.Value.CurrentLevel() != Mode.Default)
+                    if (TimeIsUp(pair.Value, reset_time) && pair.Value.CurrentLevel() != Mode.Default)
                         pair.Value.ResetLevel();
                 }
             }
         }
 
         /// <summary>
+        /// Функция, вызывающая Film.UpdatePopularFilms, если прошла неделя после последнего обновления списка популярных фильмов
+        /// </summary>
+        /// <param name="obj"></param>
+        public static void RegularPopularFilmsUpdating(object obj)
+        {
+            lock(PFTsynclock)
+            {
+                if (DateTime.Now.CompareTo(Film.LastPopularFilmsUpdate.AddDays(update_time)) != -1)
+                {
+                    Film.UpdatePopularFilms();
+                    Film.LastPopularFilmsUpdate = DateTime.Now;
+                    Film.UnloadPopularFilms();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Функция, вызывающая для каждого пользователя UpdatePlannedFilms, если время суток в диапозоне 0:00-0:59
+        /// </summary>
+        /// <param name="obj"></param>
+        public static void DailyPlannedFilmsUpdating(object obj)
+        {
+            lock(PlFTsynclock)
+            {
+                if (DateTime.Now.Hour == 0)
+                {
+                    foreach (var user in Users.Users_Dict.Values)
+                        user.UpdatePlannedFilms();
+                    Users.Unload();
+                    //ежесуточный сброс числа запросов к гуглу
+                    ServiceClass.service_data.ResetGoogleRequests();
+                }
+                if (DateTime.Now.CompareTo(ServiceClass.service_data.last_update.AddHours(24)) >= 0)
+                    //ежесуточный сброс числа запросов к гуглу
+                    ServiceClass.service_data.ResetGoogleRequests();
+            }
+        }
+
+        #endregion
+
+        /// <summary>
         /// Функция, возвращающая true, если время истекло
         /// </summary>
         /// <param name="user"></param>
         /// <returns></returns>
-        public bool TimeIsUp(User user) => DateTime.Now.CompareTo(user.LastTime.AddMilliseconds(reset_time)) != -1;
+        public static bool TimeIsUp(User user, long critical_time) => DateTime.Now.CompareTo(user.LastTime.AddMilliseconds(critical_time)) != -1;
 
-        #endregion
     }
 }
