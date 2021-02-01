@@ -23,6 +23,8 @@ namespace Freetime_Planner
 {
     public static class Film
     {
+        public static int[] PopularGenres = new int[] { 1,3,6,7,10,13,16,17,19,22,24,27,28,29,31 };
+
         //Популярные фильмы
         #region PopularFilms
         public static Dictionary<int, FilmObject> PopularFilms { get; set; }
@@ -56,7 +58,7 @@ namespace Freetime_Planner
                 }
             }
         }
-
+        
         /// <summary>
         /// Выгружает список популярных фильмов из PopularFilms в json-файл
         /// </summary>
@@ -75,7 +77,10 @@ namespace Freetime_Planner
             requestA.AddQueryParameter("api_key", Bot._mdb_key);
             requestA.AddQueryParameter("page", "1");
             IRestResponse responseA = clientA.Execute(requestA);
-            var list = JsonConvert.DeserializeObject<MDBResults>(responseA.Content).results;
+            var deserializedA = JsonConvert.DeserializeObject<MDBResults>(responseA.Content);
+            if (deserializedA == null || deserializedA.total_pages == 0)
+                return;
+            var list = deserializedA.results;
 
             //добавление второй страницы фильмов
             var clientB = new RestSharp.RestClient("https://api.themoviedb.org/3/movie/popular");
@@ -83,12 +88,13 @@ namespace Freetime_Planner
             requestB.AddQueryParameter("api_key", Bot._mdb_key);
             requestB.AddQueryParameter("page", "2");
             IRestResponse responseB = clientA.Execute(requestB);
-
-            //объединение двух списков-страниц в один список
-            list.AddRange(JsonConvert.DeserializeObject<MDBResults>(responseB.Content).results);
+            var deserializedB = JsonConvert.DeserializeObject<MDBResults>(responseB.Content);
+            if (deserializedB != null && deserializedB.total_pages != 0)
+                //объединение двух списков-страниц в один список
+                list.AddRange(deserializedB.results);
 
             //параллельный обход списка
-            Parallel.ForEach(list, (result) =>
+            Parallel.ForEach(list, (result, state) =>
             {
                 //запрос фильма по его названию
                 var KPclient1 = new RestSharp.RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
@@ -100,28 +106,36 @@ namespace Freetime_Planner
                 var deserialized = JsonConvert.DeserializeObject<FilmResults.Results>(KPresponse1.Content);
                 
                 //проверка успешности десериализации
-                if (deserialized.pagesCount > 0)
+                if (deserialized != null && deserialized.pagesCount > 0)
                 {
                     //выбор фильма из результатов ответа на запрос, такого, что это не сериал и что его еще нет в списке
                     int id = 0;
                     foreach (var f in deserialized.films)
-                        if (!f.nameRu.EndsWith("(сериал)") && !res.ContainsKey(f.filmId))
+                        if (!f.nameRu.EndsWith("(сериал)") && !f.nameRu.EndsWith("(мини-сериал)"))
                         {
                             id = f.filmId;
                             break;
                         }
-                    //запрос выбранного фильма по его ID
-                    var KPclient2 = new RestSharp.RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{id}");
-                    var KPrequest2 = new RestRequest(Method.GET);
-                    KPrequest2.AddHeader("X-API-KEY", Bot._kp_key);
-                    KPrequest2.AddHeader("accept", "application/json");
-                    var KPresponse2 = KPclient2.Execute(KPrequest2);
-                    var film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content);
-                    film.Priority = 1;
-                    film.data.VKPhotoID = Attachments.PopularFilmObjectPosterID(film);
-                    //проверка валидности загруженной фотографии
-                    if (film.data.VKPhotoID != null)
-                        res[id] = film;
+                    if (id != 0 && !res.ContainsKey(id))
+                    {
+                        //запрос выбранного фильма по его ID
+                        var KPclient2 = new RestSharp.RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{id}");
+                        var KPrequest2 = new RestRequest(Method.GET);
+                        KPrequest2.AddHeader("X-API-KEY", Bot._kp_key);
+                        KPrequest2.AddHeader("accept", "application/json");
+                        KPrequest2.AddQueryParameter("append_to_response", "BUDGET");
+                        KPrequest2.AddQueryParameter("append_to_response", "RATING");
+                        var KPresponse2 = KPclient2.Execute(KPrequest2);
+                        var film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content);
+                        if (film != null)
+                        {
+                            film.Priority = 1;
+                            film.data.VKPhotoID = Attachments.PopularFilmPosterID(film);
+                            //проверка валидности загруженной фотографии
+                            if (film.data.VKPhotoID != null)
+                                res[id] = film;
+                        }
+                    }
                 }
             });
             PopularFilms = res;
@@ -130,9 +144,6 @@ namespace Freetime_Planner
 
         //Класс, необходимый для десериализации ответа с Кинопоиска при поиске фильма по его ID
         #region FilmObject
-
-        public static string APIKey = "cfcf375a-ec0e-4bd3-9070-0c58fe97e43c";
-
 
         /// <summary>
         /// Вспомогательный класс для Data, хранящий стрну производства фильма
@@ -196,11 +207,25 @@ namespace Freetime_Planner
         /// </summary>
         public class Budget
         {
-            public int grossRu { get; set; }
-            public int grossUsa { get; set; }
-            public int grossWorld { get; set; }
+            public string grossRu { get; set; }
+            public string grossUsa { get; set; }
+            public string grossWorld { get; set; }
             public string budget { get; set; }
             public object marketing { get; set; }
+        }
+
+        public class Rating
+        {
+            public double? rating { get; set; }
+            public string ratingVoteCount { get; set; }
+            public string ratingImdb { get; set; }
+            public string ratingImdbVoteCount { get; set; }
+            public string ratingFilmCritics { get; set; }
+            public string ratingFilmCriticsVoteCount { get; set; }
+            public string ratingAwait { get; set; }
+            public string ratingAwaitCount { get; set; }
+            public string ratingRfCritics { get; set; }
+            public string ratingRfCriticsVoteCount { get; set; }
         }
 
         /// <summary>
@@ -211,14 +236,18 @@ namespace Freetime_Planner
             public Data data { get; set; }
             public ExternalId externalId { get; set; }
             public Budget budget { get; set; }
+            public Rating rating { get; set; }
             public int Priority { get; set; }
 
-            public FilmObject(string nameRu, string nameEn, string date)
+            public FilmObject(string nameRu, string nameEn, string date, int filmID)
             {
-                data = new Data();
-                data.nameRu = nameRu;
-                data.nameEn = nameEn;
-                data.premiereRu = date;
+                data = new Data
+                {
+                    nameRu = nameRu,
+                    nameEn = nameEn,
+                    premiereRu = date,
+                    filmId = filmID
+                };
             }
         }
         #endregion
@@ -239,12 +268,15 @@ namespace Freetime_Planner
             {
                 var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/" + filmID.ToString());
                 var request = new RestRequest(Method.GET);
-                request.AddHeader("X-API-KEY", APIKey);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("append_to_response", "BUDGET");
+                request.AddQueryParameter("append_to_response", "RATING");
                 IRestResponse response = client.Execute(request);
 
-                var pro = JsonConvert.DeserializeObject<FilmObject>(response.Content);
-                return FullInfo(pro);
-                //присвоить поля attachments и keyboard
+                var film = JsonConvert.DeserializeObject<FilmObject>(response.Content);
+                attachments = new List<MediaAttachment> { Attachments.PosterObject(film.data.posterUrl, film.data.filmId.ToString()) };
+                keyboard = Keyboards.FilmSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), film.data.premiereRu ?? film.data.premiereWorld ?? film.data.year, string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereDigital ?? film.data.premiereDvd);
+                return FullInfo(film);
             }
 
             /// <summary>
@@ -255,16 +287,38 @@ namespace Freetime_Planner
             public static string FullInfo(Film.FilmObject film)
             {
                 Data filmData = film.data;
-
-                string res = $"Название: {filmData.nameRu} / {filmData.nameEn}\n" +
-                    $"Описание: {filmData.description}\n" +
-                    $"Жанры: {string.Join(", ", filmData.genres.Select(x => x.genre))}\n" +
-                    $"Год выпуска: {ConvertIntIntoEmojis(filmData.year)}\n" +
-                    $"Длительность: {ConvertIntIntoEmojis(':', filmData.filmLength)}\n" +
-                    $"Возрастное ограничение: {filmData.ratingAgeLimits}\n" +
-                    $"Ссылка: {filmData.webUrl}\n";
+                string res = $"📽 {filmData.nameRu ?? filmData.nameEn} ({filmData.year})";
+                if (film.rating.rating.HasValue)
+                    res += $"\n⭐ {film.rating.rating.Value}";
+                if (filmData.filmLength != null)
+                    res += $"\n⏰ {filmData.filmLength}";
+                res += "\n";
+                if (filmData.countries != null)
+                    res += $"\n🌎 Страна: {string.Join(", ", filmData.countries.Select(x => x.country))}";
+                if (filmData.genres != null)
+                    res += $"\n🎭 Жанр: {string.Join(", ", filmData.genres.Select(x => x.genre))}";
+                res += "\n";
+                if (filmData.ratingAgeLimits != null)
+                    res += $"\n⚠ Возраст: {filmData.ratingAgeLimits}+";
+                else if (filmData.ratingMpaa != null)
+                    res += $"\n⚠ Возраст: {filmData.ratingMpaa}";
+                if (film.budget?.budget != null)
+                    res += $"\n💰 Бюджет: {film.budget.budget}";
+                if (filmData.premiereRu != null)
+                    res += $"\n📅 Дата премьеры: {ChangeDateType(filmData.premiereRu)}";
+                else if (filmData.premiereWorld != null)
+                    res += $"\n📅 Дата премьеры: {ChangeDateType(filmData.premiereWorld)}";
+                res += "\n";
+                if (filmData.description != null)
+                    res += $"\n🎬 Описание:\n{filmData.description}";
 
                 return res;
+            }
+
+            public static string ChangeDateType(string eng_date)
+            {
+                GroupCollection gr = Regex.Match(eng_date, @"(\d{4})-(\d{2})-(\d{2})").Groups;
+                return $"{gr[3]}.{gr[2]}.{gr[1]}";
             }
 
             #region Методы для превращения цифр в эмодзи
@@ -314,12 +368,14 @@ namespace Freetime_Planner
             {
                 var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
                 var request = new RestRequest(Method.GET);
-                request.AddHeader("X-API-KEY", APIKey);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
                 request.AddQueryParameter("keyword", filmName);
                 IRestResponse response = client.Execute(request);
-                FilmResults.Results pro = JsonConvert.DeserializeObject<FilmResults.Results>(response.Content);
-
-                return Keyboards.FilmResults(pro);
+                FilmResults.Results results = JsonConvert.DeserializeObject<FilmResults.Results>(response.Content);
+                if (results.pagesCount == 0)
+                    return null;
+                else
+                    return Keyboards.FilmResults(results);
             }
 
             /// <summary>
@@ -328,22 +384,24 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static MessageTemplate Random()
             {
-                RandomFilms.Results results = null;
-
                 Random random = new Random();
-                int filmYearBottomLine = random.Next(1950, DateTime.Now.AddYears(-6).Year);
-                int filmYearUpperLine = random.Next(filmYearBottomLine + 5, DateTime.Now.Year);
-                int filmRatingBottomLine = random.Next(4, 7);
+                //int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
+                //int filmYearUpperLine = random.Next(filmYearBottomLine + 5, DateTime.Now.Year+1);
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                //int filmRatingBottomLine = random.Next(4, 8);
 
                 var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
                 var request = new RestRequest(Method.GET);
-                request.AddHeader("X-API-KEY", APIKey);
-                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
-                request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
-                request.AddQueryParameter("ratingFrom", filmRatingBottomLine.ToString());
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "FILM");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+                //request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                //request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                //request.AddQueryParameter("ratingFrom", filmRatingBottomLine.ToString());
                 IRestResponse response = client.Execute(request);
 
-                results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
+                var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
                 return Keyboards.RandomFilmResults(results);
             }
 
@@ -352,18 +410,18 @@ namespace Freetime_Planner
             /// </summary>
             /// <param name="filmName"></param>
             /// <returns></returns>
-            public static bool Soundtrack(string filmName, string year, List<Audio> audios)
+            public static bool Soundtrack(string filmName, string date, List<Audio> audios, int count = 6)
             {
                 Yandex.Music.Api.Models.YandexAlbum album = null;
                 try
                 {
-                    album = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{filmName} {year} film").First(album => album.TrackCount >= 4).Id);
+                    album = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{filmName} {date.Substring(0, 4)} ").First(album => album.TrackCount >= 4).Id);
                 }
-                catch(Exception e)
+                catch(Exception)
                 {
                     return false;
                 }
-                var tracks = album.Volumes[0].Take(Math.Min(6, album.TrackCount.Value));
+                var tracks = album.Volumes[0].Take(Math.Min(count, album.TrackCount.Value));
                 var song_names = tracks.Select(track => track.Title + " " + string.Join(" ", track.Artists.Select(artist => artist.Name))).ToArray();
                 Parallel.For(0, song_names.Length, (i, state) =>
                 {
@@ -414,13 +472,13 @@ namespace Freetime_Planner
             /// <param name="filmName"></param>
             /// <param name="year"></param>
             /// <returns></returns>
-            public static MessageKeyboard ServiceLinks(string filmName, string date, string digital_release)
+            public static MessageKeyboard ServiceLinks(string filmName, string date)
             {
                 var client = new RestSharp.RestClient("https://www.googleapis.com/customsearch/v1");
                 var request = new RestRequest(Method.GET);
                 request.AddQueryParameter("key", _google_key);
                 request.AddQueryParameter("cx", _google_sid);
-                request.AddQueryParameter("q", $"{filmName} {date.Substring(0,4)} смотреть");
+                request.AddQueryParameter("q", $"{filmName} {date.Substring(0, 4)} смотреть");
                 request.AddQueryParameter("num", "10");
                 IRestResponse response = client.Execute(request);
                 ServiceClass.service_data.IncGoogleRequests();
