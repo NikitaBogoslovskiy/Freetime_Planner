@@ -6,8 +6,12 @@ namespace Freetime_Planner
 {
     public static class Modes
     {
-        public enum Mode { Default, Film, TV, Food, Search, Recommendations, PlanToWatch, Random, Dessert,
-            Snack, Cocktails, WantToWatch, Watched, Soundtrack, GenreFood, BlackList, More, AlreadyWatched, Yes, No, Back, Help, WhereToWatch } 
+        public enum Mode
+        {
+            Default, Film, TV, Food, Search, Recommendations, PlanToWatch, Random, Dessert,
+            Snack, Cocktails, WantToWatch, Watched, Soundtrack, GenreFood, BlackList, More, AlreadyWatched, Yes, No, Back, Help, WhereToWatch, Options,
+            MailFrequency, Everyday, ThreeDays, FiveDays, EveryWeek, NoMail
+        }
 
         /// <summary>
         /// Конвертер текстовой команды из главного меню в объект типа Mode
@@ -22,6 +26,7 @@ namespace Freetime_Planner
                 case "Сериалы": return Mode.TV;
                 case "Еда под просмотр": return Mode.Food;
                 case "Помощь": return Mode.Help;
+                case "Настройки": return Mode.Options;
                 default: throw new ArgumentException("Нажимай кнопки в меню");
             }
         }
@@ -55,6 +60,12 @@ namespace Freetime_Planner
                 case "Помощь": return Mode.Help;
                 case "Назад": return Mode.Back;
                 case "Где посмотреть": return Mode.WhereToWatch;
+                case "Частота рассылки": return Mode.MailFrequency;
+                case "Ежедневно": return Mode.Everyday;
+                case "Раз в три дня": return Mode.ThreeDays;
+                case "Раз в пять дней": return Mode.FiveDays;
+                case "Раз в неделю": return Mode.EveryWeek;
+                case "Без рассылки": return Mode.NoMail;
                 default: throw new ArgumentException("Нажимай кнопки в меню");
             }
         }
