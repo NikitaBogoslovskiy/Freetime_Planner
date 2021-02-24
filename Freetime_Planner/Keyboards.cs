@@ -111,7 +111,7 @@ namespace Freetime_Planner
 
             button.Clear();
 
-            button.AddButton("Хочу посмотреть", $"{nameRu};{nameEn};;{date};;", Primary, "text");
+            button.AddButton("Хочу посмотреть", $"{nameRu};{nameEn};{filmID};{date};;", Primary, "text");
             button.AddLine();
             button.AddButton("Посмотрел", $";{nameEn};{filmID};;;", Primary, "text");
             button.AddLine();
@@ -176,23 +176,31 @@ namespace Freetime_Planner
         /// <returns></returns>
         public static MessageTemplate FilmResults(FilmResults.Results results)
         {
+            IEnumerable<FilmResults.Film> films = results.films.Where(f => !f.nameRu.EndsWith("(сериал)") && !f.nameRu.EndsWith("(мини-сериал)")).Take(3);
             var carousel = new MessageTemplate();
             carousel.Type = Carousel;
             var arr = new List<CarouselElement>();
-            Parallel.ForEach(results.films, (film) =>
+            Parallel.ForEach(films, (film, state) =>
             {
-                arr.Add(CarouselFilmResult(film));
+                CarouselElement template_part = null;
+                if (CarouselFilmResult(film, ref template_part))
+                    //if (arr.Count < 3)
+                        arr.Add(template_part);
+                    //else
+                        //state.Break();
             });
             carousel.Elements = arr;
-
-            return carousel;
+            if (arr.Count == 0)
+                return null;
+            else
+                return carousel;
         }
         /// <summary>
         /// Возвращает один элемент карусели из результатов поиска фильма по названию
         /// </summary>
         /// <param name="film"></param>
         /// <returns></returns>
-        public static CarouselElement CarouselFilmResult(FilmResults.Film film)
+        public static bool CarouselFilmResult(FilmResults.Film film, ref CarouselElement template_part)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', film.genres.Select(g => g.genre));
@@ -201,9 +209,14 @@ namespace Freetime_Planner
             element.Title = film.nameRu;
             element.Description = genres.Replace("*", ", ");
             element.Buttons = button.Build().Buttons.First();
-            element.PhotoId = null;//нужно загрузить фотографию на сервер
-            return element;
-
+            element.PhotoId = Attachments.ResultedFilmPosterID(film);
+            if (element.PhotoId == null)
+                return false;
+            else
+            {
+                template_part = element;
+                return true;
+            }
         }
 
         /// <summary>
@@ -213,14 +226,26 @@ namespace Freetime_Planner
         /// <returns></returns>
         public static MessageTemplate RandomFilmResults(RandomFilms.Results results)
         {
+            IEnumerable<RandomFilms.Film> films = results.films.Shuffle().Take(3);
             var carousel = new MessageTemplate();
             carousel.Type = Carousel;
             var arr = new List<CarouselElement>();
-            Parallel.ForEach(results.films, (film) =>
+            Parallel.ForEach(films, (film, state) =>
             {
-                arr.Add(CarouselRandomFilmResult(film));
+                CarouselElement template_part = null;
+                if (CarouselRandomFilmResult(film, ref template_part))
+                    //if (arr.Count < 3)
+                        arr.Add(template_part);
+                    //else
+                        //state.Break();
             });
-            carousel.Elements = arr;
+            if (arr.Count != 0)
+                carousel.Elements = arr;
+            else
+            {
+                carousel = FilmMyRecommendations(PopularFilms.Shuffle().Take(3).Select(kv => kv.Value));
+                Console.WriteLine("Костыль");
+            }
 
             return carousel;
         }
@@ -229,7 +254,7 @@ namespace Freetime_Planner
         /// </summary>
         /// <param name="film"></param>
         /// <returns></returns>
-        public static CarouselElement CarouselRandomFilmResult(RandomFilms.Film film)
+        public static bool CarouselRandomFilmResult(RandomFilms.Film film, ref CarouselElement template_part)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', film.genres.Select(g => g.genre));
@@ -239,8 +264,13 @@ namespace Freetime_Planner
             element.Description = genres.Replace("*", ", ");
             element.Buttons = button.Build().Buttons.First();
             element.PhotoId = Attachments.RandomFilmPosterID(film);
-            return element;
-
+            if (element.PhotoId == null)
+                return false;
+            else
+            {
+                template_part = element;
+                return true;
+            }
         }
 
         /// <summary>
@@ -274,12 +304,12 @@ namespace Freetime_Planner
         /// Клавиатура в сообщении для кнопки "Просмотрел"
         /// </summary>
         /// <returns></returns>
-        public static MessageKeyboard FilmWatched(string nameEn)
+        public static MessageKeyboard FilmWatched(string nameEn, string filmID)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             button.Clear();
 
-            button.AddButton("Да", $";{nameEn};;;;", Positive, "text");
+            button.AddButton("Да", $";{nameEn};{filmID};;;", Positive, "text");
             //button.AddLine();
             button.AddButton("Нет", $";{nameEn};;;;", Negative, "text");
 
@@ -329,15 +359,14 @@ namespace Freetime_Planner
 
             button.Clear();
 
-            button.AddButton("Хочу посмотреть", $"{nameRu};{nameEn};{filmID};;{genres};", Primary, "text");
+            button.AddButton("Хочу посмотреть", $"{nameRu};{nameEn};{filmID};;;", Primary, "text");
             button.AddLine();
-            button.AddButton("Посмотрел", $"{nameRu};{nameEn};{filmID};;{genres};", Primary, "text");
+            button.AddButton("Посмотрел", $";{nameEn};{filmID};;;", Primary, "text");
             button.AddLine();
-            button.AddButton("Саундтрек", $"{nameRu};{nameEn};{filmID};;{genres};", Primary, "text");
+            button.AddButton("Саундтрек", $"{nameRu};{nameEn};;;;", Primary, "text");
+            button.AddButton("Еда", $";;;;{genres};", Primary, "text");
             button.AddLine();
-            button.AddButton("Что поесть", $"{nameRu};{nameEn};{filmID};;{genres};", Primary, "text");
-            button.AddLine();
-            button.AddButton("Не показывать", $"{nameRu};{nameEn};{filmID};;{genres};", Negative, "text");
+            button.AddButton("Не показывать", $";;{filmID};;;", Negative, "text");
 
             button.SetInline();
             return button.Build();
@@ -346,25 +375,26 @@ namespace Freetime_Planner
        
 
         //"Сериалы"->"Мои рекомендации"
-        public static MessageTemplate TVMyRecommendations(TVObject[] tvs)
+        public static MessageTemplate TVMyRecommendations(IEnumerable<TVObject> tvs)
         {
             var carousel = new MessageTemplate();
             carousel.Type = Carousel;
             var arr = new List<CarouselElement>();
-            Parallel.ForEach(tvs, (tv) =>
+            foreach (var f in tvs)
             {
-                arr.Add(CarouselTV(tv));
-            });
+                arr.Add(CarouselTV(f));
+            }
             carousel.Elements = arr;
+
             return carousel;
         }
         public static CarouselElement CarouselTV(TVObject tv)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', tv.data.genres.Select(g => g.genre));
-            button.AddButton("Подробнее", $"{tv.data.nameRu};{tv.data.nameEn};{tv.data.filmId};;{genres};", Positive, "text");
+            button.AddButton("Подробнее", $";;{tv.data.filmId};;;", Positive, "text");
             var element = new CarouselElement();
-            element.Title = tv.data.nameRu;
+            element.Title = tv.data.nameRu.Replace("(сериал)", "");
             element.Description = genres.Replace("*", ", ");
             element.Buttons = button.Build().Buttons.First();
             element.PhotoId = tv.data.VKPhotoID;
@@ -373,55 +403,80 @@ namespace Freetime_Planner
 
         public static MessageTemplate TVResults(TVResults.Results results)
         {
+            IEnumerable<TVResults.Film> films = results.films.Where(f => f.nameRu.EndsWith("(сериал)") || f.nameRu.EndsWith("(мини-сериал)")).Take(3);
             var carousel = new MessageTemplate();
             carousel.Type = Carousel;
             var arr = new List<CarouselElement>();
-            Parallel.ForEach(results.films, (film) =>
+            Parallel.ForEach(films, (film, state) =>
             {
-                arr.Add(CarouselTVResult(film));
+                CarouselElement template_part = null;
+                if (CarouselTVResult(film, ref template_part))
+                    arr.Add(template_part);
             });
             carousel.Elements = arr;
-
-            return carousel;
+            if (arr.Count == 0)
+                return null;
+            else
+                return carousel;
         }
-        public static CarouselElement CarouselTVResult(TVResults.Film film)
+        public static bool CarouselTVResult(TVResults.Film film, ref CarouselElement template_part)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', film.genres.Select(g => g.genre));
-            button.AddButton("Подробнее", $"{film.nameRu};{film.nameEn};{film.filmId};;{genres};", Positive, "text");
+            button.AddButton("Подробнее", $";;{film.filmId};;;", Positive, "text");
             var element = new CarouselElement();
-            element.Title = film.nameRu;
+            element.Title = film.nameRu.Replace("(сериал)", "");
             element.Description = genres.Replace("*", ", ");
             element.Buttons = button.Build().Buttons.First();
-            element.PhotoId = null;//нужно загрузить фотографию на сервер
-            return element;
-
+            element.PhotoId = Attachments.ResultedTVPosterID(film);
+            if (element.PhotoId == null)
+                return false;
+            else
+            {
+                template_part = element;
+                return true;
+            }
         }
 
         public static MessageTemplate RandomTVResults(RandomTV.Results results)
         {
+            IEnumerable<RandomTV.Film> films = results.films.Shuffle().Take(3);
             var carousel = new MessageTemplate();
             carousel.Type = Carousel;
             var arr = new List<CarouselElement>();
-            Parallel.ForEach(results.films, (film) =>
+            Parallel.ForEach(films, (film, state) =>
             {
-                arr.Add(CarouselRandomTVResult(film));
+                CarouselElement template_part = null;
+                if (CarouselRandomTVResult(film, ref template_part))
+                    arr.Add(template_part);
             });
-            carousel.Elements = arr;
+            if (arr.Count != 0)
+                carousel.Elements = arr;
+            else
+            {
+                carousel = TVMyRecommendations(PopularTV.Shuffle().Take(3).Select(kv => kv.Value));
+                Console.WriteLine("Костыль");
+            }
 
             return carousel;
         }
-        public static CarouselElement CarouselRandomTVResult(RandomTV.Film film)
+        public static bool CarouselRandomTVResult(RandomTV.Film film, ref CarouselElement template_part)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', film.genres.Select(g => g.genre));
-            button.AddButton("Подробнее", $"{film.nameRu};{film.nameEn};{film.filmId};;{genres};", Positive, "text");
+            button.AddButton("Подробнее", $";;{film.filmId};;;", Positive, "text");
             var element = new CarouselElement();
-            element.Title = film.nameRu;
+            element.Title = film.nameRu.Replace("(сериал)", "");
             element.Description = genres.Replace("*", ", ");
             element.Buttons = button.Build().Buttons.First();
-            element.PhotoId = null;//нужно загрузить фотографию на сервер
-            return element;
+            element.PhotoId = Attachments.RandomTVPosterID(film);
+            if (element.PhotoId == null)
+                return false;
+            else
+            {
+                template_part = element;
+                return true;
+            }
 
         }
         /// <summary>
@@ -434,7 +489,6 @@ namespace Freetime_Planner
             button.Clear();
 
             button.AddButton("Уже посмотрел", "Inline", Primary, "text");
-
 
             button.SetInline();
             return button.Build();
@@ -453,14 +507,14 @@ namespace Freetime_Planner
         /// Клавиатура в сообщении для кнопки "Просмотрел"
         /// </summary>
         /// <returns></returns>
-        public static MessageKeyboard TVWatched(string nameRu, string nameEn, string filmID, string genres)
+        public static MessageKeyboard TVWatched(string nameEn, string TVID)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             button.Clear();
 
-            button.AddButton("Да", $"{nameRu};{nameEn};{filmID};;{genres}", Positive, "text");
+            button.AddButton("Да", $";{nameEn};{TVID};;;", Positive, "text");
             //button.AddLine();
-            button.AddButton("Нет", $"{nameRu};{nameEn};{filmID};;{genres}", Negative, "text");
+            button.AddButton("Нет", $";{nameEn};{TVID};;;", Negative, "text");
 
             button.SetInline();
             return button.Build();

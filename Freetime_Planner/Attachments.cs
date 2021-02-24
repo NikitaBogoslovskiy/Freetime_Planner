@@ -14,15 +14,19 @@ namespace Freetime_Planner
     
     public static class Attachments
     {
+        //Вложения для фильмов
+        #region FilmPosters
         /// <summary>
         /// Возвращает ID постера фильма из списка PopularFilms
         /// </summary>
         /// <param name="film"></param>
         /// <returns></returns>
-        public static string PopularFilmObjectPosterID(Film.FilmObject film)
+        public static string PopularFilmPosterID(Film.FilmObject film)
         {
             string path = String.Format("film_{0}_{1}.jpg", film.data.filmId, Guid.NewGuid());
             WebClient wc = new WebClient();
+            if (film.data.posterUrl == null)
+                return null;
             wc.DownloadFile(film.data.posterUrl, path);
             if (!CropAndOverwrite(path))
                 return null;
@@ -39,6 +43,187 @@ namespace Freetime_Planner
             return vkid;
         }
 
+        public static string ResultedFilmPosterID(FilmResults.Film film)
+        {
+            string path = String.Format("film_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
+            WebClient wc = new WebClient();
+            if (film.posterUrl == null)
+                return null;
+            wc.DownloadFile(film.posterUrl, path);
+            if (!CropAndOverwrite(path))
+                return null;
+            var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_results, Bot.group_id);
+            var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+            var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+            {
+                SaveFileResponse = responseFile,
+                AlbumId = Bot.album_id_results,
+                GroupId = Bot.group_id
+            }).First();
+            var vkid = $"-{Bot.group_id}_{photo.Id}";
+            File.Delete(path);
+            return vkid;
+        }
+
+        public static string RandomFilmPosterID(RandomFilms.Film film)
+        {
+            string path = String.Format("film_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
+            WebClient wc = new WebClient();
+            if (film.posterUrl == null)
+                return null;
+            wc.DownloadFile(film.posterUrl, path);
+            if (!CropAndOverwrite(path))
+                return null;
+            var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_random, Bot.group_id);
+            var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+            var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+            {
+                SaveFileResponse = responseFile,
+                AlbumId = Bot.album_id_random,
+                GroupId = Bot.group_id
+            }).First();
+            var vkid = $"-{Bot.group_id}_{photo.Id}";
+            File.Delete(path);
+            return vkid;
+        }
+
+        public static string RecommendedFilmPosterID(Film.FilmObject film)
+        {
+            string path = String.Format("film_{0}_{1}.jpg", film.data.filmId, Guid.NewGuid());
+            WebClient wc = new WebClient();
+            if (film.data.posterUrl == null)
+                return null;
+            wc.DownloadFile(film.data.posterUrl, path);
+            if (!CropAndOverwrite(path))
+                return null;
+            var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended, Bot.group_id);
+            var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+            var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+            {
+                SaveFileResponse = responseFile,
+                AlbumId = Bot.album_id_recommended,
+                GroupId = Bot.group_id
+            }).First();
+            var vkid = $"-{Bot.group_id}_{photo.Id}";
+            File.Delete(path);
+            return vkid;
+        }
+        #endregion
+
+        //Вложения для сериалов
+        #region TVPosters
+
+        public static string PopularTVPosterID(TV.TVObject tv)
+        {
+            string path = String.Format("tv_{0}_{1}.jpg", tv.data.filmId, Guid.NewGuid());
+            WebClient wc = new WebClient();
+            if (tv.data.posterUrl == null)
+                return null;
+            wc.DownloadFile(tv.data.posterUrl, path);
+            if (!CropAndOverwrite(path))
+                return null;
+            var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular_tv, Bot.group_id);
+            var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+            var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+            {
+                SaveFileResponse = responseFile,
+                AlbumId = Bot.album_id_popular_tv,
+                GroupId = Bot.group_id
+            }).First();
+            var vkid = $"-{Bot.group_id}_{photo.Id}";
+            File.Delete(path);
+            return vkid;
+        }
+
+        public static string ResultedTVPosterID(TVResults.Film film)
+        {
+            string path = String.Format("tv_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
+            WebClient wc = new WebClient();
+            if (film.posterUrl == null)
+                return null;
+            wc.DownloadFile(film.posterUrl, path);
+            if (!CropAndOverwrite(path))
+                return null;
+            var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_results_tv, Bot.group_id);
+            var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+            var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+            {
+                SaveFileResponse = responseFile,
+                AlbumId = Bot.album_id_results_tv,
+                GroupId = Bot.group_id
+            }).First();
+            var vkid = $"-{Bot.group_id}_{photo.Id}";
+            File.Delete(path);
+            return vkid;
+        }
+
+        public static string RandomTVPosterID(RandomTV.Film film)
+        {
+            string path = String.Format("tv_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
+            WebClient wc = new WebClient();
+            if (film.posterUrl == null)
+                return null;
+            wc.DownloadFile(film.posterUrl, path);
+            if (!CropAndOverwrite(path))
+                return null;
+            var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_random_tv, Bot.group_id);
+            var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+            var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+            {
+                SaveFileResponse = responseFile,
+                AlbumId = Bot.album_id_random_tv,
+                GroupId = Bot.group_id
+            }).First();
+            var vkid = $"-{Bot.group_id}_{photo.Id}";
+            File.Delete(path);
+            return vkid;
+        }
+
+        public static string RecommendedTVPosterID(TV.TVObject tv)
+        {
+            string path = String.Format("tv_{0}_{1}.jpg", tv.data.filmId, Guid.NewGuid());
+            WebClient wc = new WebClient();
+            if (tv.data.posterUrl == null)
+                return null;
+            wc.DownloadFile(tv.data.posterUrl, path);
+            if (!CropAndOverwrite(path))
+                return null;
+            var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended_tv, Bot.group_id);
+            var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+            try
+            {
+                var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                {
+                    SaveFileResponse = responseFile,
+                    AlbumId = Bot.album_id_recommended_tv,
+                    GroupId = Bot.group_id
+                }).First();
+                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                File.Delete(path);
+                return vkid;
+            }
+            catch(Exception)
+            {
+                return null;
+            }
+        }
+
+        #endregion
+
+
+        public static Photo PosterObject(string url, string filmID)
+        {
+            string path = String.Format("film_{0}_{1}.jpg", filmID, Guid.NewGuid());
+            WebClient wc = new WebClient();
+            wc.DownloadFile(url, path);
+            var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(Bot.user.ID);
+            var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+            var photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
+            File.Delete(path);
+            return photo;
+        }
+        
+        /*
         /// <summary>
         /// Возвращает ID постера фильма
         /// </summary>
@@ -63,39 +248,7 @@ namespace Freetime_Planner
             File.Delete(path);
             return vkid;
         }
-
-        public static string RandomFilmPosterID(RandomFilms.Film film)
-        {
-            string path = $"film_{film.filmId}.jpg";
-            WebClient wc = new WebClient();
-            wc.DownloadFile(film.posterUrl, path);
-            if (!CropAndOverwrite(path))
-                return null;
-            var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id, Bot.group_id);
-            var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
-            var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
-            {
-                SaveFileResponse = responseFile,
-                AlbumId = Bot.album_id,
-                GroupId = Bot.group_id
-            }).First();
-            var vkid = $"-{Bot.group_id}_{photo.Id}";
-            File.Delete(path);
-            return vkid;
-        }
-
-        public static Photo PosterObject(string url, string filmID)
-        {
-            string path = String.Format("film_{0}_{1}.jpg", filmID, Guid.NewGuid());
-            WebClient wc = new WebClient();
-            wc.DownloadFile(url, path);
-            var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(Bot.user.ID);
-            var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
-            var photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
-            File.Delete(path);
-            return photo;
-        }
-
+        */
         /*
         /// <summary>
         /// Возвращает ID ВК загруженного постера фильма

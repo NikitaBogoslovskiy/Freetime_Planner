@@ -56,6 +56,12 @@ namespace Freetime_Planner
 
         public HashSet<int> HiddenTV { get; set; }
 
+        public int DaysGap { get; set; }
+
+        public DateTime NextMail { get; set; }
+
+        public Queue<Mailing.MailObject> MailObjects { get; set; }
+
         /// <summary>
         /// Конструктор пользователя
         /// </summary>
@@ -72,9 +78,14 @@ namespace Freetime_Planner
             FilmRecommendations = Film.PopularFilms;
             HiddenFilms = new HashSet<int>();
             PlannedFilms = new List<Film.FilmObject>[] { new List<Film.FilmObject>(), new List<Film.FilmObject>() };
-            TVRecommendations = new Dictionary<int, TV.TVObject>();
+            TVRecommendations = TV.PopularTV;
             HiddenTV = new HashSet<int>();
             PlannedTV = new List<TV.TVObject>();
+            DaysGap = 1;
+            var next = DateTime.Now.AddDays(DaysGap);
+            var r = new Random();
+            NextMail = new DateTime(next.Year, next.Month, next.Day, r.Next(12, 21), 0, 0);
+            MailObjects = new Queue<Mailing.MailObject>();
         }
 
         /// <summary>
@@ -125,6 +136,18 @@ namespace Freetime_Planner
             //Bot.SendMessage("Жми любую кнопку");
         }
 
+        public async void AddMailObjectAsync(string id)
+        {
+            await Task.Run(() => AddMailObject(id));
+        }
+
+        public void AddMailObject(string id)
+        {
+            var mail = new Mailing.MailObject(id);
+            if (mail.IsValid && !MailObjects.Any(o => o.id == id))
+                MailObjects.Enqueue(mail);
+        }
+
         //--------------Пользовательские методы для фильмов--------------
 
         /// <summary>
@@ -142,10 +165,19 @@ namespace Freetime_Planner
         /// <returns></returns>
         public string GetPlannedFilms()
         {
-            //Вышедшие / не вышедшие
-            string res = $"Вышедшие:\n{string.Join($"\n   ", PlannedFilms[0].Select(x => x.data.nameRu))}";
-            res += $"\nНевышедшие:\n{string.Join($"\n"   , PlannedFilms[1].Select(x => x.data.nameRu))}";
-            //Замечание: использовать поле PlannedFilms
+            string res = "Премьера состоялась:\n";
+            for (int i = 0; i < PlannedFilms[0].Count; i++)
+                res += $"{i + 1}. {PlannedFilms[0][i].data.nameRu ?? PlannedFilms[0][i].data.nameEn}\n";
+            res += "\nПремьера в будущем:\n";
+            for (int i = 0; i < PlannedFilms[1].Count; i++)
+            {
+                string date = "";
+                if (PlannedFilms[1][i].data.premiereRu.Length != 4)
+                    date = Film.Methods.ChangeDateType(PlannedFilms[1][i].data.premiereRu);
+                else
+                    date = PlannedFilms[1][i].data.premiereRu;
+                res += $"{i + 1 + PlannedFilms[0].Count}. {PlannedFilms[1][i].data.nameRu ?? PlannedFilms[1][i].data.nameEn} ({date})";
+            }
             return res;
         }
 
@@ -155,15 +187,30 @@ namespace Freetime_Planner
         /// <param name="nameRu"></param>
         /// <param name="nameEn"></param>
         /// <param name="Date"></param>
-        public void AddPlannedFilm(string nameRu, string nameEn, string Date)
+        public bool AddPlannedFilm(string nameRu, string nameEn, string Date, string filmID)
         {
-            var premiere = StringToDate(Date);
-            if (DateTime.Now.CompareTo(premiere) < 0)
-                PlannedFilms[1].Add(new Film.FilmObject(nameRu, nameEn, Date));
+            DateTime premiere;
+            if (Date.Length != 4)
+                premiere = StringToDate(Date);
             else
-                PlannedFilms[0].Add(new Film.FilmObject(nameRu, nameEn, Date));
+                premiere = new DateTime(int.Parse(Date), 1, 1);
+            if (DateTime.Now.CompareTo(premiere) < 0)
+            {
+                if (PlannedFilms[1].Any(f => f.data.filmId.ToString() == filmID))
+                    return false;
+                else
+                    PlannedFilms[1].Add(new Film.FilmObject(nameRu, nameEn, Date, int.Parse(filmID)));
+            }
+            else
+            {
+                if (PlannedFilms[0].Any(f => f.data.filmId.ToString() == filmID))
+                    return false;
+                else
+                    PlannedFilms[0].Add(new Film.FilmObject(nameRu, nameEn, Date, int.Parse(filmID)));
+            }
             Users.Unload();
             UpdateFilmRecommendationsAsync(nameEn);
+            return true;
         }
 
         /// <summary>
@@ -186,7 +233,7 @@ namespace Freetime_Planner
         public void LikeFilm(string nameEn)
         {
             UpdateFilmRecommendationsAsync(nameEn);
-            return;
+            //return;
         }
 
         /// <summary>
@@ -195,8 +242,8 @@ namespace Freetime_Planner
         /// <param name="filmID"></param>
         public void HideFilm(int filmID)
         {
-            if (HiddenFilms.Add(filmID))
-                FilmRecommendations.Remove(filmID);
+            HiddenFilms.Add(filmID);
+            FilmRecommendations.Remove(filmID);
             if (FilmRecommendations.Count < 6)
                 IncRecommendedFilmsAsync();
             Users.Unload();
@@ -257,9 +304,12 @@ namespace Freetime_Planner
         /// <param name="nameEn"></param>
         private void UpdateFilmRecommendations(string nameEn)
         {
+            if (nameEn == null || nameEn == string.Empty)
+                return;
             //урезание списка рекомендаций, чтобы после добавления новых рекомендаций количество элементов в нем не превышало 50
             int difference = FilmRecommendations.Count - 45;
             var new_array = FilmRecommendations.OrderBy(kv => kv.Value.Priority).Skip(difference).ToDictionary(kv => kv.Key, kv => kv.Value);
+            var required_count = new_array.Count + 5;
 
             //поиск фильма в англоязычной базе данных с целью получения его ID
             var client1 = new RestSharp.RestClient("https://api.themoviedb.org/3/search/movie");
@@ -267,22 +317,23 @@ namespace Freetime_Planner
             request1.AddQueryParameter("api_key", Bot._mdb_key);
             request1.AddQueryParameter("query", nameEn);
             IRestResponse response1 = client1.Execute(request1);
-            string id = JsonConvert.DeserializeObject<MDBResults>(response1.Content).results.First().id.ToString();
+            var deserialized1 = JsonConvert.DeserializeObject<MDBResults>(response1.Content);
+            if (deserialized1 == null || deserialized1.total_pages == 0)
+                return;
+            string sid = deserialized1.results.First().id.ToString();
 
             //поиск в англоязычной базе данных рекомендуемых фильмов к данному, используя ID данного фильма
-            var client2 = new RestSharp.RestClient($"https://api.themoviedb.org/3/movie/{id}/recommendations");
+            var client2 = new RestSharp.RestClient($"https://api.themoviedb.org/3/movie/{sid}/recommendations");
             var request2 = new RestRequest(Method.GET);
             request2.AddQueryParameter("api_key", Bot._mdb_key);
             IRestResponse response2 = client2.Execute(request2);
-            string[] names = JsonConvert.DeserializeObject<MDBResults>(response2.Content).results.Select(film => film.title).ToArray();
+            var deserialized2 = JsonConvert.DeserializeObject<MDBResults>(response2.Content);
+            if (deserialized2 == null || deserialized2.total_pages == 0)
+                return;
+            string[] names = deserialized2.results.Select(film => film.title).ToArray();
 
-            int count = 0;
-            Parallel.ForEach(names, (name, state) =>
+            foreach (var name in names)
             {
-                //добавляем только пять фильмов
-                if (count > 5)
-                    state.Break();
-
                 //поиск рекомендуемого фильма по его названию на Кинопоиске с целью получения его ID
                 var KPclient1 = new RestSharp.RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
                 var KPrequest1 = new RestRequest(Method.GET);
@@ -293,33 +344,42 @@ namespace Freetime_Planner
                 var deserialized = JsonConvert.DeserializeObject<FilmResults.Results>(KPresponse1.Content);
 
                 //проверка успешности десериализации
-                if (deserialized.pagesCount > 0)
-                {
-                    int id = 0;
-                    //проверка, чтобы найденный фильм не был сериалом, не входил в список рекомендаций и не содержался в HiddenFilms
-                    foreach (var f in deserialized.films)
-                        if (!f.nameRu.EndsWith("(сериал)") && !new_array.ContainsKey(f.filmId) && !HiddenFilms.Contains(id))
-                        {
-                            id = f.filmId;
-                            break;
-                        }
-                    //поиск фильма по выбранному ID
-                    var KPclient2 = new RestSharp.RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{id}");
-                    var KPrequest2 = new RestRequest(Method.GET);
-                    KPrequest2.AddHeader("X-API-KEY", Bot._kp_key);
-                    KPrequest1.AddHeader("accept", "application/json");
-                    IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
-                    var film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content);
-                    film.Priority = 2;
-                    film.data.VKPhotoID = Attachments.FilmObjectPosterID(film);
-                    //проверка валидности изображения
-                    if (film.data.VKPhotoID != null)
+                if (deserialized != null)
+                    if(deserialized.pagesCount > 0)
                     {
-                        new_array[id] = film;
-                        count++;
+                        int id = 0;
+                        //проверка, чтобы найденный фильм не был сериалом, не входил в список рекомендаций и не содержался в HiddenFilms
+                        foreach (var f in deserialized.films)
+                            if (!f.nameRu.EndsWith("(сериал)") && !f.nameRu.EndsWith("(мини-сериал)"))
+                            {
+                                id = f.filmId;
+                                break;
+                            }
+                        if (id == 0 || new_array.ContainsKey(id) || HiddenFilms.Contains(id))
+                            continue;
+                        //поиск фильма по выбранному ID
+                        var KPclient2 = new RestSharp.RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{id}");
+                        var KPrequest2 = new RestRequest(Method.GET);
+                        KPrequest2.AddHeader("X-API-KEY", Bot._kp_key);
+                        KPrequest2.AddHeader("accept", "application/json");
+                        KPrequest2.AddQueryParameter("append_to_response", "BUDGET");
+                        KPrequest2.AddQueryParameter("append_to_response", "RATING");
+                        IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
+                        var film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content);
+                        if (film == null)
+                            continue;
+                        film.Priority = 2;
+                        film.data.VKPhotoID = Attachments.RecommendedFilmPosterID(film);
+                        //проверка валидности изображения
+                        if (film.data.VKPhotoID != null)
+                        {
+                            new_array[id] = film;
+                            //добавляем только требуемое количество
+                            if (new_array.Count >= required_count)
+                                break;
+                        }
                     }
-                }
-            });
+            }
             FilmRecommendations = new_array;
             Users.Unload();
         }
@@ -328,30 +388,41 @@ namespace Freetime_Planner
 
         public MessageTemplate GetTVRecommendations()
         {
-            return null;
+            return Keyboards.TVMyRecommendations(TVRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
 
         public string GetPlannedTV()
         {
-            return "<планируемые сериалы>";
+            string res = "Планируемые к просмотру сериалы:\n";
+            for (int i = 0; i < PlannedTV.Count; i++)
+                res += $"{i + 1}. {PlannedTV[i].data.nameRu ?? PlannedTV[i].data.nameEn}\n";
+            return res;
         }
 
-        public void AddPlannedTV(string nameRu, string nameEn)
+        public bool AddPlannedTV(string nameRu, string nameEn, string filmID)
         {
+            if (PlannedTV.Any(f => f.data.filmId.ToString() == filmID))
+                return false;
+            else
+                PlannedTV.Add(new TV.TVObject(nameRu, nameEn, int.Parse(filmID)));
             UpdateTVRecommendationsAsync(nameEn);
-            return;
+            Users.Unload();
+            return true;
         }
 
         public void LikeTV(string nameEn)
         {
             UpdateTVRecommendationsAsync(nameEn);
-            return;
+            //return;
         }
 
         public void HideTV(int TVID)
         {
-            //также необходимо редактировать список рекомендаций
-            return;
+            HiddenTV.Add(TVID);
+            TVRecommendations.Remove(TVID);
+            if (TVRecommendations.Count < 6)
+                IncRecommendedTVAsync();
+            Users.Unload();
         }
         public void AlreadyWatchedTV(int index, int TVID)
         {
@@ -372,7 +443,102 @@ namespace Freetime_Planner
 
         private void UpdateTVRecommendations(string nameEn)
         {
+            if (nameEn == null || nameEn == string.Empty)
+                return;
+            //урезание списка рекомендаций, чтобы после добавления новых рекомендаций количество элементов в нем не превышало 50
+            int difference = TVRecommendations.Count - 45;
+            var new_array = TVRecommendations.OrderBy(kv => kv.Value.Priority).Skip(difference).ToDictionary(kv => kv.Key, kv => kv.Value);
+            var required_count = new_array.Count + 5;
 
+            //поиск сериала в англоязычной базе данных с целью получения его ID
+            var client1 = new RestSharp.RestClient("https://api.themoviedb.org/3/search/tv");
+            var request1 = new RestRequest(Method.GET);
+            request1.AddQueryParameter("api_key", Bot._mdb_key);
+            request1.AddQueryParameter("query", nameEn);
+            IRestResponse response1 = client1.Execute(request1);
+            var deserialized1 = JsonConvert.DeserializeObject<MDBResultsTV>(response1.Content);
+            if (deserialized1 == null || deserialized1.total_pages == 0)
+                return;
+            string sid = deserialized1.results.First().id.ToString();
+
+            //поиск в англоязычной базе данных рекомендуемых сериалов к данному, используя ID данного сериала
+            var client2 = new RestSharp.RestClient($"https://api.themoviedb.org/3/tv/{sid}/recommendations");
+            var request2 = new RestRequest(Method.GET);
+            request2.AddQueryParameter("api_key", Bot._mdb_key);
+            IRestResponse response2 = client2.Execute(request2);
+            var deserialized2 = JsonConvert.DeserializeObject<MDBRecommendations>(response2.Content);
+            if (deserialized2 == null || deserialized2.total_pages == 0)
+                return;
+            string[] names = deserialized2.results.Select(film => film.name).ToArray();
+
+            foreach (var name in names)
+            {
+                //поиск рекомендуемого сериала по его названию на Кинопоиске с целью получения его ID
+                var KPclient1 = new RestSharp.RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
+                var KPrequest1 = new RestRequest(Method.GET);
+                KPrequest1.AddHeader("X-API-KEY", Bot._kp_key);
+                KPrequest1.AddHeader("accept", "application/json");
+                KPrequest1.AddQueryParameter("keyword", name);
+                IRestResponse KPresponse1 = KPclient1.Execute(KPrequest1);
+                var deserialized = JsonConvert.DeserializeObject<TVResults.Results>(KPresponse1.Content);
+
+                //проверка успешности десериализации
+                if (deserialized != null)
+                    if (deserialized.pagesCount > 0)
+                    {
+                        int id = 0;
+                        //проверка, чтобы найденный сериал являлся действительно сериалом, не входил в список рекомендаций и не содержался в HiddenTV
+                        foreach (var f in deserialized.films)
+                            if (f.nameRu.EndsWith("(сериал)") || f.nameRu.EndsWith("(мини-сериал)"))
+                            {
+                                id = f.filmId;
+                                break;
+                            }
+                        if (id == 0 || new_array.ContainsKey(id) || HiddenTV.Contains(id))
+                            continue;
+                        //поиск сериала по выбранному ID
+                        var KPclient2 = new RestSharp.RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{id}");
+                        var KPrequest2 = new RestRequest(Method.GET);
+                        KPrequest2.AddHeader("X-API-KEY", Bot._kp_key);
+                        KPrequest2.AddHeader("accept", "application/json");
+                        KPrequest2.AddQueryParameter("append_to_response", "RATING");
+                        IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
+                        var tv = JsonConvert.DeserializeObject<TV.TVObject>(KPresponse2.Content);
+                        if (tv == null)
+                            continue;
+                        tv.Priority = 2;
+                        tv.data.VKPhotoID = Attachments.RecommendedTVPosterID(tv);
+                        //проверка валидности изображения
+                        if (tv.data.VKPhotoID != null)
+                        {
+                            new_array[id] = tv;
+                            //добавляем только требуемое количество
+                            if (new_array.Count >= required_count)
+                                break;
+                        }
+                    }
+            }
+            TVRecommendations = new_array;
+            Users.Unload();
+        }
+
+        /// <summary>
+        /// Добавляет популярные сериалы в список рекомендуемых сериалов асинхронно
+        /// </summary>
+        private async void IncRecommendedTVAsync()
+        {
+            await Task.Run(() => IncRecommendedTV());
+        }
+        /// <summary>
+        /// Добавляет популярные сериалы в список рекомендуемых сериалов синхронно
+        /// </summary>
+        private void IncRecommendedTV()
+        {
+            Parallel.ForEach(TV.PopularTV, (kv) =>
+            {
+                TVRecommendations.Add(kv.Key, kv.Value);
+            });
+            Users.Unload();
         }
 
 
