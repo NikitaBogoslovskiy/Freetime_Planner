@@ -200,7 +200,7 @@ namespace Freetime_Planner
         /// <summary>
         /// Конструктор класса Bot, внутри которого выполняются все подготовительные действия
         /// </summary>
-        public Bot()  
+        public Bot()
         {
             Init();
             Users.Upload();
@@ -240,7 +240,8 @@ namespace Freetime_Planner
             {
                 WritelnColor("Попытка авторизации...", ConsoleColor.White);
                 vkapi.Authorize(new ApiAuthParams { AccessToken = _access_token });
-                private_vkapi.Authorize(new ApiAuthParams {
+                private_vkapi.Authorize(new ApiAuthParams
+                {
                     Login = _vk_login,
                     Password = _vk_password
                 });
@@ -563,6 +564,10 @@ namespace Freetime_Planner
                                     " времени, то жми сюда - я пришлю видео приготовления несложного десерта\n- 'Закуски': если тебя интересуют холодные закуски, то эта кнопка для тебя - тебе так же придет" +
                                     " видео приготовления блюда\n- 'Коктели': если хочешь приготовить несложный безалкогольный коктейль, то используй эту кнопку, чтобы получить видео-инструкцию приготовления";
 
+        public static string OptionsHelp = "В этом меню тебе доступна одна кнопка - 'Частота рассылки': с помощью нее ты можешь регулировать частоту рассылки " +
+            "кадров, интересных фактов, саундтрека и трейлеров. Единственное, что не поддается этой настройке - это новые трейлеры и напоминание пойти в кино для тех фильмов, " +
+            "что добавлены в список планируемых фильмов и находятся в категории 'Премьера в будущем'";
+
         /// <summary>
         /// Командный центр, определяющий уровень пользователя и реакцию на его сообщение
         /// </summary>
@@ -573,7 +578,7 @@ namespace Freetime_Planner
             switch (user.Level.Count)
             {
                 case 1:
-                    try 
+                    try
                     {
                         var level = MainMenu(message.Text);
                         if (payload == null)
@@ -597,7 +602,7 @@ namespace Freetime_Planner
                         SendMessage("Выбери режим обзора фильмов");
                     }
                     else if (user.CurrentLevel() == Mode.TV)
-                    { 
+                    {
                         keyboard = Keyboards.TVKeyboard;
                         SendMessage("Выбери режим обзора сериалов");
                     }
@@ -610,6 +615,11 @@ namespace Freetime_Planner
                     {
                         SendMessage(MainHelp);
                         user.RemoveLevel();
+                    }
+                    else if (user.CurrentLevel() == Mode.Options)
+                    {
+                        keyboard = Keyboards.Options();
+                        SendMessage("Выбери настройку");
                     }
                     break;
 
@@ -636,6 +646,16 @@ namespace Freetime_Planner
                     {
                         if (payload != "Command")
                         {
+                            if (p.type != "f")
+                            {
+                                if (p.type == "t")
+                                    SendMessage("Ты хочешь воспользоваться кнопкой, предназначенной для сериалов, находясь во вкладке 'Фильмы'. Перейди во вкладку" +
+                                    " 'Сериалы' и повтори нажатие кнопки");
+                                else if (p.type == "o")
+                                    SendMessage("Ты хочешь поменять мои настройки. Перейди во вкладку 'Настройки' и повтори нажатие кнопки");
+                                user.RemoveLevel();
+                                break;
+                            }
                             switch (user.CurrentLevel())
                             {
                                 //"Посмотрел"
@@ -720,7 +740,8 @@ namespace Freetime_Planner
                                 //"Да" (посмотрел, понравилось)
                                 case Yes:
                                     user.LikeFilm(p.nameEn);
-                                    user.AddMailObjectAsync(p.filmId);
+                                    if (user.MailFunction)
+                                        user.AddMailObjectAsync(p.filmId);
                                     SendMessage("Круто! Буду советовать похожие");
                                     user.RemoveLevel();
                                     break;
@@ -763,7 +784,7 @@ namespace Freetime_Planner
                                 case Recommendations:
                                     SendMessage("Составляю список рекомендаций...");
                                     //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    template = user.GetFilmRecommendations();                                  
+                                    template = user.GetFilmRecommendations();
                                     keyboard = null;
                                     SendMessage("Рекомендуемые фильмы");
                                     template = null;
@@ -812,6 +833,16 @@ namespace Freetime_Planner
                     {
                         if (payload != "Command")
                         {
+                            if (p.type != "t")
+                            {
+                                if (p.type == "f")
+                                    SendMessage("Ты хочешь воспользоваться кнопкой, предназначенной для фильмов, находясь во вкладке 'Сериалы'. Перейди во вкладку" +
+                                    " 'Фильмы' и повтори нажатие кнопки");
+                                else if (p.type == "o")
+                                    SendMessage("Ты хочешь поменять мои настройки. Перейди во вкладку 'Настройки' и повтори нажатие кнопки");
+                                user.RemoveLevel();
+                                break;
+                            }
                             switch (user.CurrentLevel())
                             {
                                 //"Посмотрел"
@@ -893,7 +924,8 @@ namespace Freetime_Planner
                                 //"Да" (посмотрел, понравилось)
                                 case Yes:
                                     user.LikeTV(p.nameEn);
-                                    user.AddMailObjectAsync(p.filmId);
+                                    if (user.MailFunction)
+                                        user.AddMailObjectAsync(p.filmId);
                                     SendMessage("Круто! Буду советовать похожие");
                                     user.RemoveLevel();
                                     break;
@@ -970,6 +1002,19 @@ namespace Freetime_Planner
                     }
                     else if (previous_level == Mode.Food)
                     {
+                        if (payload != "Command")
+                        {
+                            if (p.type == "f")
+                                SendMessage("Ты хочешь воспользоваться кнопкой, предназначенной для фильмов, находясь во вкладке 'Еда под просмотр'. Перейди во вкладку" +
+                                " 'Фильмы' и повтори нажатие кнопки");
+                            else if (p.type == "t")
+                                SendMessage("Ты хочешь воспользоваться кнопкой, предназначенной для сериалов, находясь во вкладке 'Еда под просмотр'. Перейди во вкладку" +
+                                " 'Сериалы' и повтори нажатие кнопки");
+                            else if (p.type == "o")
+                                SendMessage("Ты хочешь поменять мои настройки. Перейди во вкладку 'Настройки' и повтори нажатие кнопки");
+                            user.RemoveLevel();
+                            break;
+                        }
                         switch (user.CurrentLevel())
                         {
                             //"Закуски"
@@ -1011,6 +1056,93 @@ namespace Freetime_Planner
 
                         }
                         user.RemoveLevel();
+                    }
+                    else if (previous_level == Mode.Options)
+                    {
+                        if (payload != "Command")
+                        {
+                            if (p.type != "o")
+                            {
+                                if (p.type == "f")
+                                    SendMessage("Ты хочешь воспользоваться кнопкой, предназначенной для фильмов, находясь во вкладке 'Настройки'. Перейди во вкладку" +
+                                    " 'Фильмы' и повтори нажатие кнопки");
+                                else if (p.type == "t")
+                                    SendMessage("Ты хочешь воспользоваться кнопкой, предназначенной для сериалов, находясь во вкладке 'Настройки'. Перейди во вкладку" +
+                                " 'Сериалы' и повтори нажатие кнопки");
+                                user.RemoveLevel();
+                                break;
+                            }
+                            switch (user.CurrentLevel())
+                            {
+                                //"Ежедневно"
+                                case Everyday:
+                                    user.MailFunction = true;
+                                    user.DaysGap = 1;
+                                    SendMessage("Частота рассылки успешно изменена");
+                                    user.RemoveLevel();
+                                    break;
+
+                                //"Раз в три дня"
+                                case ThreeDays:
+                                    user.MailFunction = true;
+                                    user.DaysGap = 3;
+                                    SendMessage("Частота рассылки успешно изменена");
+                                    user.RemoveLevel();
+                                    break;
+
+                                //"Раз в пять дней"
+                                case FiveDays:
+                                    user.MailFunction = true;
+                                    user.DaysGap = 5;
+                                    SendMessage("Частота рассылки успешно изменена");
+                                    user.RemoveLevel();
+                                    break;
+
+                                //"Раз в неделю"
+                                case EveryWeek:
+                                    user.MailFunction = true;
+                                    user.DaysGap = 7;
+                                    SendMessage("Частота рассылки успешно изменена");
+                                    user.RemoveLevel();
+                                    break;
+
+                                //"Без рассылки"
+                                case NoMail:
+                                    user.MailFunction = false;
+                                    SendMessage("Рассылка успешно выключена");
+                                    user.RemoveLevel();
+                                    break;
+
+                            }
+                        }
+                        else
+                        {
+                            switch (user.CurrentLevel())
+                            {
+                                //"Частота рассылки"
+                                case MailFrequency:
+                                    keyboard = Keyboards.MailFrequency();
+                                    SendMessage("Выбери комфортную для себя частоту рассылки:");
+                                    keyboard = null;
+                                    user.RemoveLevel();
+                                    break;
+
+                                //"Помощь"
+                                case Help:
+                                    SendMessage(OptionsHelp);
+                                    user.RemoveLevel();
+                                    break;
+
+                                //"Назад"
+                                case Back:
+                                    keyboard = Keyboards.MainKeyboard;
+                                    SendMessage("Выбери один из режимов");
+                                    keyboard = null;
+                                    user.RemoveLevel();
+                                    user.RemoveLevel();
+                                    break;
+                            }
+                        }
                     }
                     break;
 
@@ -1070,7 +1202,7 @@ namespace Freetime_Planner
                                     SendMessage("Понравился фильм?");
                                     keyboard = null;
                                 }
-                                catch(FormatException)
+                                catch (FormatException)
                                 {
                                     SendMessage("По-моему, ты ввел не порядковый номер, а что-то другое. Нужно ввести число, стоящее слева от просмотренного фильма");
                                 }
@@ -1083,7 +1215,7 @@ namespace Freetime_Planner
                                 break;
                         }
                         user.RemoveLevel();
-                    
+
                     }
                     else if (previous_level == Mode.TV)
                     {
@@ -1145,7 +1277,7 @@ namespace Freetime_Planner
                     }
                     break;
 
-                default:                                                    
+                default:
                     break;  //доделать дефолт
 
             }
@@ -1165,7 +1297,7 @@ namespace Freetime_Planner
         public static int update_time = 7; //7 дней - срок, после которого обновляются популярные фильмы и сериалы
         public static object PFTsynclock = new object();
 
-        public static Timer PlannedFilmsTimer;
+        public static Timer OneHourTimer;
         public static int PlFTinterval = 3600000; //1 час - интервал проверки 
         public static int day_time = 0; //0 - час в сутках, в который обновляются планируемые фильмы (т.е. в диапозоне 0:00-0:59)
         public static object PlFTsynclock = new object();
@@ -1177,7 +1309,7 @@ namespace Freetime_Planner
         {
             ResetTimer = new Timer(new TimerCallback(Reset), null, 0, RTinterval); //таймер, вызывающий каждый интервал времени RTinterval функцию Reset
             PopularFilmsTimer = new Timer(new TimerCallback(RegularPopularFilmsUpdating), null, 0, PFTinterval); //таймер, вызывающий каждый интервал времени PFTinterval функцию RegularPopularFilmsUpdating
-            PlannedFilmsTimer = new Timer(new TimerCallback(DailyPlannedFilmsUpdating), null, 0, PlFTinterval); //таймер, вызывающий каждый интервал времени PlFTinterval функцию DailyPlannedFilmsUpdating
+            OneHourTimer = new Timer(new TimerCallback(OneHourChecker), null, 0, PlFTinterval); //таймер, вызывающий каждый интервал времени PlFTinterval функцию DailyPlannedFilmsUpdating
         }
 
         /// <summary>
@@ -1186,9 +1318,9 @@ namespace Freetime_Planner
         /// <param name="obj"></param>
         public static void Reset(object obj)
         {
-            lock(synclock)
+            lock (synclock)
             {
-                foreach(var pair in Users.Users_Dict)
+                foreach (var pair in Users.Users_Dict)
                 {
                     if (TimeIsUp(pair.Value, reset_time) && pair.Value.CurrentLevel() != Mode.Default)
                         pair.Value.ResetLevel();
@@ -1202,7 +1334,7 @@ namespace Freetime_Planner
         /// <param name="obj"></param>
         public static void RegularPopularFilmsUpdating(object obj)
         {
-            lock(PFTsynclock)
+            lock (PFTsynclock)
             {
                 if (DateTime.Now.CompareTo(Film.LastPopularFilmsUpdate.AddDays(update_time)) != -1)
                 {
@@ -1220,13 +1352,14 @@ namespace Freetime_Planner
         }
 
         /// <summary>
-        /// Функция, вызывающая для каждого пользователя UpdatePlannedFilms, если время суток в диапозоне 0:00-0:59
+        /// Функция, которая вызывается таймером каждый час
         /// </summary>
         /// <param name="obj"></param>
-        public static void DailyPlannedFilmsUpdating(object obj)
+        public static void OneHourChecker(object obj)
         {
-            lock(PlFTsynclock)
+            lock (PlFTsynclock)
             {
+                //Обновление списка планируемых фильмов, если сейчас 0:00-0:59
                 if (DateTime.Now.Hour == 0)
                 {
                     foreach (var user in Users.Users_Dict.Values)
@@ -1234,15 +1367,55 @@ namespace Freetime_Planner
                     Users.Unload();
                 }
 
+                //Напоминание пойти в кино за две недели, если сейчас 19:00-19:59
+                if (DateTime.Now.Hour == 19)
+                {
+                    foreach (var u in Users.Users_Dict.Values)
+                    {
+                        string message = "Напоминаю, что следующие фильмы уже совсем скоро выходят в кино:\n\n";
+                        var en = u.PlannedFilms[1].Where(f => f.data.premiereRu.Length != 4).Where(f => !f.TwoWeeksNotification).Where(f => DateTime.Now.AddDays(14).CompareTo(User.StringToDate(f.data.premiereRu)) >= 0);
+                        if (en.Count() == 0)
+                            continue;
+                        message += string.Join("\n", en.Select(f => $"{f.data.nameRu ?? f.data.nameEn} ({Film.Methods.ChangeDateType(f.data.premiereRu)})"));
+                        var previous_user = user;
+                        user = u;
+                        SendMessage(message);
+                        user = previous_user;
+                        foreach (var film in en)
+                            film.TwoWeeksNotification = true;
+                    }
+                    Users.Unload();
+                }
+
+                //Напоминание пойти в кино за день, если сейчас 20:00-20:59
+                if (DateTime.Now.Hour == 20)
+                {
+                    foreach (var u in Users.Users_Dict.Values)
+                    {
+                        string message = "Напоминаю, что следующие фильмы выходят в кино уже завтра:\n\n";
+                        var en = u.PlannedFilms[1].Where(f => f.data.premiereRu.Length != 4).Where(f => !f.PremiereNotification).Where(f => DateTime.Now.AddDays(1).CompareTo(User.StringToDate(f.data.premiereRu)) >= 0);
+                        if (en.Count() == 0)
+                            continue;
+                        message += string.Join("\n", en.Select(f => $"{f.data.nameRu ?? f.data.nameEn} ({Film.Methods.ChangeDateType(f.data.premiereRu)})"));
+                        var previous_user = user;
+                        user = u;
+                        SendMessage(message);
+                        user = previous_user;
+                        foreach (var film in en)
+                            film.PremiereNotification = true;
+                    }
+                    Users.Unload();
+                }
+
+                //ежесуточный сброс числа запросов к гуглу
                 if (DateTime.Now.CompareTo(ServiceClass.service_data.last_update.AddHours(24)) >= 0)
-                    //ежесуточный сброс числа запросов к гуглу
                     ServiceClass.service_data.ResetGoogleRequests();
 
                 //рассылка кадров, фактов и саундтрека
                 if (12 <= DateTime.Now.Hour && DateTime.Now.Hour <= 22)
                 {
                     var r = new Random();
-                    foreach (var p in Users.Users_Dict.Values)
+                    foreach (var p in Users.Users_Dict.Values.Where(u => u.MailFunction))
                     {
                         if (DateTime.Now.CompareTo(p.NextMail) >= 0 && p.MailObjects.Count != 0)
                         {
@@ -1257,7 +1430,10 @@ namespace Freetime_Planner
                                 message += "\n\n";
                                 message += string.Join("\n", mail.Facts.Select(f => $"✅ {f}"));
                             }
+                            var previous_user = user;
+                            user = p;
                             SendMessage(message);
+                            user = previous_user;
                             attachments = null;
                             var next = DateTime.Now.AddDays(p.DaysGap);
                             p.NextMail = new DateTime(next.Year, next.Month, next.Day, r.Next(12, 21), 0, 0);

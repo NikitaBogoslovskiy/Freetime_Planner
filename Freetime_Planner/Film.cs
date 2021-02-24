@@ -23,7 +23,7 @@ namespace Freetime_Planner
 {
     public static class Film
     {
-        public static int[] PopularGenres = new int[] { 1,3,6,7,10,13,16,17,19,22,24,27,28,29,31 };
+        public static int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
 
         //Популярные фильмы
         #region PopularFilms
@@ -58,7 +58,7 @@ namespace Freetime_Planner
                 }
             }
         }
-        
+
         /// <summary>
         /// Выгружает список популярных фильмов из PopularFilms в json-файл
         /// </summary>
@@ -104,7 +104,7 @@ namespace Freetime_Planner
                 KPrequest1.AddQueryParameter("keyword", result.original_title);
                 var KPresponse1 = KPclient1.Execute(KPrequest1);
                 var deserialized = JsonConvert.DeserializeObject<FilmResults.Results>(KPresponse1.Content);
-                
+
                 //проверка успешности десериализации
                 if (deserialized != null && deserialized.pagesCount > 0)
                 {
@@ -238,6 +238,8 @@ namespace Freetime_Planner
             public Budget budget { get; set; }
             public Rating rating { get; set; }
             public int Priority { get; set; }
+            public bool TwoWeeksNotification { get; set; }
+            public bool PremiereNotification { get; set; }
 
             public FilmObject(string nameRu, string nameEn, string date, int filmID)
             {
@@ -248,6 +250,8 @@ namespace Freetime_Planner
                     premiereRu = date,
                     filmId = filmID
                 };
+                TwoWeeksNotification = false;
+                PremiereNotification = false;
             }
         }
         #endregion
@@ -417,7 +421,7 @@ namespace Freetime_Planner
                 {
                     album = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{filmName} {date.Substring(0, 4)} ").First(album => album.TrackCount >= 4).Id);
                 }
-                catch(Exception)
+                catch (Exception)
                 {
                     return false;
                 }
@@ -484,7 +488,7 @@ namespace Freetime_Planner
                 ServiceClass.service_data.IncGoogleRequests();
                 var results = JsonConvert.DeserializeObject<GoogleResponse>(response.Content);
                 var dict = new Dictionary<string, string>();
-                foreach(var item in results.items)
+                foreach (var item in results.items)
                 {
                     if (Regex.IsMatch(item.link, @"https://www.ivi.ru/watch/\d+$") && !dict.ContainsKey("IVI"))
                         dict["IVI"] = item.link;
