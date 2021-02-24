@@ -56,6 +56,8 @@ namespace Freetime_Planner
 
         public HashSet<int> HiddenTV { get; set; }
 
+        public bool MailFunction { get; set; }
+
         public int DaysGap { get; set; }
 
         public DateTime NextMail { get; set; }
@@ -81,6 +83,7 @@ namespace Freetime_Planner
             TVRecommendations = TV.PopularTV;
             HiddenTV = new HashSet<int>();
             PlannedTV = new List<TV.TVObject>();
+            MailFunction = true;
             DaysGap = 1;
             var next = DateTime.Now.AddDays(DaysGap);
             var r = new Random();
@@ -146,6 +149,7 @@ namespace Freetime_Planner
             var mail = new Mailing.MailObject(id);
             if (mail.IsValid && !MailObjects.Any(o => o.id == id))
                 MailObjects.Enqueue(mail);
+            Users.Unload();
         }
 
         //--------------Пользовательские методы для фильмов--------------
@@ -221,7 +225,7 @@ namespace Freetime_Planner
             var dict = new SortedDictionary<DateTime, Film.FilmObject>();
             foreach (var film in PlannedFilms[1])
                 dict[StringToDate(film.data.premiereRu)] = film;
-            int count = dict.Count(kv => DateTime.Now.CompareTo(kv.Key) > 0);
+            int count = dict.Count(kv => DateTime.Now.CompareTo(kv.Key) >= 0);
             PlannedFilms[0].AddRange(dict.Take(count).Select(kv => kv.Value));
             PlannedFilms[1] = dict.Skip(count).Select(kv => kv.Value).ToList();
         }
@@ -345,7 +349,7 @@ namespace Freetime_Planner
 
                 //проверка успешности десериализации
                 if (deserialized != null)
-                    if(deserialized.pagesCount > 0)
+                    if (deserialized.pagesCount > 0)
                     {
                         int id = 0;
                         //проверка, чтобы найденный фильм не был сериалом, не входил в список рекомендаций и не содержался в HiddenFilms
@@ -424,6 +428,7 @@ namespace Freetime_Planner
                 IncRecommendedTVAsync();
             Users.Unload();
         }
+        /*
         public void AlreadyWatchedTV(int index, int TVID)
         {
             //нужно убрать сериал из списка PlannedTV
@@ -435,6 +440,7 @@ namespace Freetime_Planner
         {
             return null;
         }
+        */
 
         private async void UpdateTVRecommendationsAsync(string nameEn)
         {
@@ -580,6 +586,7 @@ namespace Freetime_Planner
     public class Payload
     {
         public string text { get; set; }
+        public string type { get; set; }
         public string nameRu { get; set; }
         public string nameEn { get; set; }
         public string filmId { get; set; }
@@ -594,13 +601,14 @@ namespace Freetime_Planner
             text = Regex.Match(payload, "{\\\".*\\\" *: *\\\"(.*)\\\"}").Groups[1].Value;
             if (!text.Contains(';'))
                 return;
-            GroupCollection m = Regex.Match(text, "(.*);(.*);(.*);(.*);(.*);(.*)").Groups;
-            nameRu = m[1].Value;
-            nameEn = m[2].Value;
-            filmId = m[3].Value;
-            date = m[4].Value;
-            genres = m[5].Value;
-            digital_release = m[6].Value;
+            GroupCollection m = Regex.Match(text, "(.*);(.*);(.*);(.*);(.*);(.*);(.*)").Groups;
+            type = m[1].Value;
+            nameRu = m[2].Value;
+            nameEn = m[3].Value;
+            filmId = m[4].Value;
+            date = m[5].Value;
+            genres = m[6].Value;
+            digital_release = m[7].Value;
         }
 
         //public static string PayloadValue(string payload) => payload == null ? "" : Regex.Match(payload, "{\\\".*\\\" *: *\\\"(.*)\\\"").Groups[1].Value; //JsonConvert.DeserializeObject<Payload>(payload).text;
