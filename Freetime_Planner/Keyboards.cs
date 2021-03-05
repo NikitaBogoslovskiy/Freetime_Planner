@@ -435,7 +435,7 @@ namespace Freetime_Planner
         public static string TVMessage(TVObject tv)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
-            button.AddButton("Подробнее", $"f;;;{tv.data.filmId};;;", Positive, "text");
+            button.AddButton("Подробнее", $"t;;;{tv.data.filmId};;;", Positive, "text");
             button.SetInline();
             Bot.keyboard = button.Build();
 

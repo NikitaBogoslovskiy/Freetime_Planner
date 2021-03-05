@@ -825,7 +825,7 @@ namespace Freetime_Planner
                                     keyboard = null;
                                     SendMessage("Результаты поиска");
                                     template = null;
-                                    user.RemoveLevel();
+                                    user.RemoveLevel(); 
                                     break;
 
                                 //"Назад"
