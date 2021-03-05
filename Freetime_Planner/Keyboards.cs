@@ -15,6 +15,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
+
+using VkNet.Model.Attachments;//
+
+
 namespace Freetime_Planner
 {
     public static class Keyboards
@@ -148,6 +152,31 @@ namespace Freetime_Planner
             carousel.Elements = arr;
 
             return carousel;
+        }
+     
+        public static void FilmMyRecommendationsMessage(IEnumerable<Film.FilmObject> farray)
+        {
+            int i = 0;
+            var photo = Bot.private_vkapi.Photo.GetById(farray.Select(f => f.data.VKPhotoID));
+            foreach (var f in farray)
+            {
+               Bot.attachments = new List<MediaAttachment> { Bot.private_vkapi.Photo.GetById(new string[]{ f.data.VKPhotoID})[0] };
+               Bot.SendMessage(FilmMessage(f));
+                ++i;
+            }
+      
+        }
+
+        public static string FilmMessage(Film.FilmObject film)
+        {
+            
+                var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+                button.AddButton("Подробнее", $"f;;;{film.data.filmId};;;", Positive, "text");
+                button.SetInline();
+                Bot.keyboard = button.Build();
+            
+            string str = film.data.nameRu + "\nжанр: " + string.Join(',',film.data.genres.Select(g =>g.genre)) + ".";
+            return str;
         }
 
         /// <summary>
@@ -387,8 +416,35 @@ namespace Freetime_Planner
             carousel.Elements = arr;
 
             return carousel;
+           
+
         }
-        public static CarouselElement CarouselTV(TVObject tv)
+        //Не (mobile online)
+        public static void TVMyRecommendationsMessage(IEnumerable<TVObject> tvs)
+        {
+ 
+            int i = 0;
+            var photo = Bot.private_vkapi.Photo.GetById(tvs.Select(f => f.data.VKPhotoID));
+            foreach (var f in tvs)
+            {
+                Bot.attachments = new List<MediaAttachment> { Bot.private_vkapi.Photo.GetById(new string[] { f.data.VKPhotoID })[0] };
+                Bot.SendMessage(TVMessage(f));
+                ++i;
+            }
+        }
+        public static string TVMessage(TVObject tv)
+        {
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            button.AddButton("Подробнее", $"f;;;{tv.data.filmId};;;", Positive, "text");
+            button.SetInline();
+            Bot.keyboard = button.Build();
+
+            string str = tv.data.nameRu + "\nжанр: " + string.Join(',', tv.data.genres.Select(g => g.genre)) + ".";
+            return str;
+
+        }
+
+            public static CarouselElement CarouselTV(TVObject tv)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             var genres = string.Join('*', tv.data.genres.Select(g => g.genre));

@@ -163,6 +163,11 @@ namespace Freetime_Planner
             return Keyboards.FilmMyRecommendations(FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
 
+        public void GetFilmRecommendationsMessage()
+        {
+             Keyboards.FilmMyRecommendationsMessage(FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
+        }
+
         /// <summary>
         /// Возвращает список планируемых фильмов в текстовом виде (с разделением на вышедшие фильмы и те, что выйдут)
         /// </summary>
@@ -395,6 +400,10 @@ namespace Freetime_Planner
             return Keyboards.TVMyRecommendations(TVRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
 
+        public void GetTVRecommendationsMessage()
+        {
+            Keyboards.TVMyRecommendationsMessage(TVRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
+        }
         public string GetPlannedTV()
         {
             string res = "Планируемые к просмотру сериалы:\n";

@@ -195,6 +195,11 @@ namespace Freetime_Planner
         /// </summary>
         public static long? captcha_sid;
 
+
+        public static bool? IsMobileVersion;
+
+
+
         //Функции региона MainArea
 
         /// <summary>
@@ -450,9 +455,10 @@ namespace Freetime_Planner
                 if (messages[i].Type != MessageType.Sended)
                 {
                     message = messages[i];
-                    VkNet.Model.User Sender = vkapi.Users.Get(new long[] { messages[i].PeerId.Value })[0];
-                    user = Users.GetUser(Sender, out bool IsOld);
 
+                    VkNet.Model.User Sender = vkapi.Users.Get(new long[] { messages[i].PeerId.Value },ProfileFields.Online)[0];
+                    IsMobileVersion = Sender.OnlineMobile;
+                     user = Users.GetUser(Sender, out bool IsOld);
                     if (message.Attachments.Count != 0)
                     {
                         if (message.Attachments[0].Instance is AudioMessage am)
@@ -784,13 +790,25 @@ namespace Freetime_Planner
                                 case Recommendations:
                                     SendMessage("Составляю список рекомендаций...");
                                     //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    template = user.GetFilmRecommendations();
-                                    keyboard = null;
-                                    SendMessage("Рекомендуемые фильмы");
-                                    template = null;
+                                    if (IsMobileVersion != null)
+                                    {
+                                        template = user.GetFilmRecommendations();
+                                        keyboard = null;
+                                        SendMessage("Рекомендуемые фильмы");
+                                        template = null;
+                                    }
+                                    else
+                                    {
+                                      
+                                        keyboard = null;
+                                        SendMessage("Рекомендуемые фильмы");
+                                        user.GetFilmRecommendationsMessage();
+                                        attachments = null;
+                                        keyboard = null;
+                                    }
                                     user.RemoveLevel();
-                                    break;
-
+                                        break;
+                                   
                                 //"Планирую посмотреть"
                                 case PlanToWatch:
                                     keyboard = Keyboards.FilmPlanToWatch();
@@ -955,10 +973,21 @@ namespace Freetime_Planner
                                 case Recommendations:
                                     SendMessage("Составляю список рекомендаций...");
                                     //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    template = user.GetTVRecommendations();
-                                    keyboard = null;
-                                    SendMessage("Рекомендуемые сериалы");
-                                    template = null;
+                                    if (IsMobileVersion != null)
+                                    {
+                                        template = user.GetTVRecommendations();
+                                        keyboard = null;
+                                        SendMessage("Рекомендуемые сериалы");
+                                        template = null;
+                                    }
+                                    else
+                                    {
+                                        keyboard = null;
+                                        SendMessage("Рекомендуемые сериалы");
+                                        user.GetTVRecommendationsMessage();
+                                        attachments = null;
+                                        keyboard = null;
+                                    }
                                     user.RemoveLevel();
                                     break;
 
