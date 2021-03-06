@@ -153,7 +153,7 @@ namespace Freetime_Planner
 
             return carousel;
         }
-     
+     //-----------------------------"Мои рекомендации для не мобильного приложения"---------------------------------------
         public static void FilmMyRecommendationsMessage(IEnumerable<Film.FilmObject> farray)
         {
             int i = 0;
@@ -178,6 +178,7 @@ namespace Freetime_Planner
             string str = film.data.nameRu + "\nжанр: " + string.Join(',',film.data.genres.Select(g =>g.genre)) + ".";
             return str;
         }
+        //-----------------------------"_|_"---------------------------------------
 
         /// <summary>
         /// Возвращает один элемент карусели фильмов-рекомендаций
@@ -301,6 +302,60 @@ namespace Freetime_Planner
                 return true;
             }
         }
+        //------------------"Рандомный фильм" для мобильного приложения -----------------------------------------------
+
+        public static void RandomFilmResultsMessage(RandomFilms.Results results)
+        {
+            IEnumerable<RandomFilms.Film> films = results.films.Shuffle().Take(3);
+
+            var arr = new List<(string, Photo, MessageKeyboard)>();
+            // паралельно создаём три фильма для рандома
+            Parallel.ForEach(films, (film, state) =>
+            {
+               // string message_part = null;//название,жанры одного фильма/сообщения
+                MessageRandomFilmResult(film, out var message_part, out var photo, out var more);
+                var tuple = (message_part, photo, more);
+                arr.Add(tuple);
+            });
+            Bot.SendMessage("Результаты поиска");
+            if (arr.Count != 0)
+            foreach (var m in  arr)
+                {
+                    Bot.attachments = new List<MediaAttachment> { m.Item2 };
+                    Bot.keyboard = m.Item3; 
+                    Bot.SendMessage(m.Item1);
+                }
+                    
+            else
+            {
+                FilmMyRecommendationsMessage(PopularFilms.Shuffle().Take(3).Select(kv => kv.Value));
+                Console.WriteLine("Костыль");
+            }
+
+            
+        }
+        /// <summary>
+        /// Возвращает один элемент карусели рандомных фильмов
+        /// </summary>
+        /// <param name="film"></param>
+        /// <returns></returns>
+        public static void MessageRandomFilmResult(RandomFilms.Film film, out string message_part, out Photo photo, out MessageKeyboard grok)
+        {
+            //создаём клавиатуру
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            button.AddButton("Подробнее", $"f;;;{film.filmId};;;", Positive, "text");
+            button.SetInline();
+            grok = button.Build();
+            //достаём постер
+             photo = Attachments.PosterObject(film.posterUrl, film.filmId.ToString());
+            //готовим сообщение
+            message_part = " " + film.nameRu   +"\nжанр: " + string.Join(", ", film.genres.Select(g => g.genre)) + ".";
+            //добро пожаловать в Рандом
+        }
+
+
+
+        //---------------------------------------------------------------------------------------------------------------------------------------------
 
         /// <summary>
         /// "Фильмы"->"Планирую посмотреть"

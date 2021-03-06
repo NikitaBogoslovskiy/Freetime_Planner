@@ -386,7 +386,7 @@ namespace Freetime_Planner
             /// Возвращает карусель из фильмов, которые были получены в результате случайного поиска фильма (используется класс FilmResults)
             /// </summary>
             /// <returns></returns>
-            public static MessageTemplate Random()
+                public static MessageTemplate Random()
             {
                 Random random = new Random();
                 //int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
@@ -408,13 +408,35 @@ namespace Freetime_Planner
                 var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
                 return Keyboards.RandomFilmResults(results);
             }
+            public static void Random_inMessage()
+            {
+                Random random = new Random();
+                //int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
+                //int filmYearUpperLine = random.Next(filmYearBottomLine + 5, DateTime.Now.Year+1);
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                //int filmRatingBottomLine = random.Next(4, 8);
 
-            /// <summary>
-            /// Возвращает список аудиозаписей по названию фильма
-            /// </summary>
-            /// <param name="filmName"></param>
-            /// <returns></returns>
-            public static bool Soundtrack(string filmName, string date, List<Audio> audios, int count = 6)
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "FILM");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+                //request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                //request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                //request.AddQueryParameter("ratingFrom", filmRatingBottomLine.ToString());
+                IRestResponse response = client.Execute(request);
+
+                var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
+
+                 Keyboards.RandomFilmResultsMessage(results);
+            }
+                /// <summary>
+                /// Возвращает список аудиозаписей по названию фильма
+                /// </summary>
+                /// <param name="filmName"></param>
+                /// <returns></returns>
+                public static bool Soundtrack(string filmName, string date, List<Audio> audios, int count = 6)
             {
                 Yandex.Music.Api.Models.YandexAlbum album = null;
                 try

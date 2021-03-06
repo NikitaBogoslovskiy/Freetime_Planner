@@ -820,11 +820,23 @@ namespace Freetime_Planner
                                 //"Рандомный фильм"
                                 case Modes.Mode.Random:
                                     SendMessage("Ищу случайные фильмы...");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    template = Film.Methods.Random();
-                                    keyboard = null;
-                                    SendMessage("Результаты поиска");
-                                    template = null;
+                                    if (IsMobileVersion != null)
+                                    {
+                                        vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                        template = Film.Methods.Random();
+                                        keyboard = null;
+                                        SendMessage("Результаты поиска");
+                                        template = null;
+                                    }
+                                    else
+                                    {
+
+                                        vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                        
+                                        Film.Methods.Random_inMessage();
+                                        attachments = null;
+                                        keyboard = null;
+                                    }
                                     user.RemoveLevel();
                                     break;
 
