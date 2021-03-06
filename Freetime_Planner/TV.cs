@@ -292,12 +292,25 @@ namespace Freetime_Planner
                 request.AddQueryParameter("keyword", TVName);
                 IRestResponse response = client.Execute(request);
                 TVResults.Results results = JsonConvert.DeserializeObject<TVResults.Results>(response.Content);
-                if (results.pagesCount == 0)
+                if (results == null || results.pagesCount == 0)
                     return null;
                 else
                     return Keyboards.TVResults(results);
             }
-
+            //----not online---------------------------------------------------------
+            public static void Search_inMessage(string TVName)
+            {
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("keyword", TVName);
+                IRestResponse response = client.Execute(request);
+                TVResults.Results results = JsonConvert.DeserializeObject<TVResults.Results>(response.Content);
+                if (results == null || results.pagesCount == 0)
+                    SendMessage("К сожалению, я не смог найти такой сериал... 😔");
+                else
+                     Keyboards.TVResultsMessage(results);
+            }
             public static MessageTemplate Random()
             {
                 Random random = new Random();
@@ -320,7 +333,29 @@ namespace Freetime_Planner
                 var results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content);
                 return Keyboards.RandomTVResults(results);
             }
+            //------- not mobile -------
+            public static void Random_inMessage()
+            {
+                Random random = new Random();
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
+                //int filmYearUpperLine = random.Next(filmYearBottomLine + 5, DateTime.Now.Year+1);
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                //int filmRatingBottomLine = random.Next(4, 8);
 
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "TV_SHOW");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", Film.PopularGenres[random.Next(0, Film.PopularGenres.Length)].ToString());
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                //request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                //request.AddQueryParameter("ratingFrom", filmRatingBottomLine.ToString());
+                IRestResponse response = client.Execute(request);
+
+                var results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content);
+                Keyboards.RandomTVResultsMessage(results);
+            }
             public static bool Soundtrack(string TVName, List<Audio> audios, int count = 6)
             {
                 Yandex.Music.Api.Models.YandexAlbum album = null;

@@ -376,17 +376,30 @@ namespace Freetime_Planner
                 request.AddQueryParameter("keyword", filmName);
                 IRestResponse response = client.Execute(request);
                 FilmResults.Results results = JsonConvert.DeserializeObject<FilmResults.Results>(response.Content);
-                if (results.pagesCount == 0)
+                if (results == null || results.pagesCount == 0)
                     return null;
                 else
                     return Keyboards.FilmResults(results);
             }
-
+            //not mobile
+            public static void Search_inMessage(string filmName)
+            {
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("keyword", filmName);
+                IRestResponse response = client.Execute(request);
+                FilmResults.Results results = JsonConvert.DeserializeObject<FilmResults.Results>(response.Content);
+                if (results == null || results.pagesCount == 0)
+                    Bot.SendMessage("К сожалению, я не смог найти такой фильм... 😔");
+                else
+                    Keyboards.FilmResultsMessage(results);
+            }
             /// <summary>
             /// Возвращает карусель из фильмов, которые были получены в результате случайного поиска фильма (используется класс FilmResults)
             /// </summary>
             /// <returns></returns>
-                public static MessageTemplate Random()
+            public static MessageTemplate Random()
             {
                 Random random = new Random();
                 //int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
@@ -408,6 +421,7 @@ namespace Freetime_Planner
                 var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
                 return Keyboards.RandomFilmResults(results);
             }
+            //not mobile
             public static void Random_inMessage()
             {
                 Random random = new Random();
