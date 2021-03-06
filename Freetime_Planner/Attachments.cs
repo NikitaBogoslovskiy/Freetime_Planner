@@ -22,13 +22,45 @@ namespace Freetime_Planner
         /// </summary>
         /// <param name="film"></param>
         /// <returns></returns>
-        public static string PopularFilmPosterID(Film.FilmObject film)
+        public static string PopularFilmPosterID(Film.FilmObject film, out string ID)
         {
+            ID = null;
             string path = String.Format("film_{0}_{1}.jpg", film.data.filmId, Guid.NewGuid());
             WebClient wc = new WebClient();
             if (film.data.posterUrl == null || film.data.posterUrl == string.Empty)
                 return null;
             wc.DownloadFile(film.data.posterUrl, path);
+            //
+            Bitmap bMap = new Bitmap(path);
+            if (TooSmallSize(bMap))
+            {
+                //221х136 - минимальный размер изображения в карусели
+                bMap.Dispose();
+                if (System.IO.File.Exists(path))
+                    System.IO.File.Delete(path);
+                return null;
+            }
+            try
+            {
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular, Bot.group_id);
+                var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+                var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                {
+                    SaveFileResponse = responseFile,
+                    AlbumId = Bot.album_id_popular,
+                    GroupId = Bot.group_id
+                }).First();
+                ID = $"-{Bot.group_id}_{photo.Id}";
+            }
+            catch (Exception e)
+            {
+                WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
+                ID = null;
+                return null;
+
+            }
+
+            //
             if (!CropAndOverwrite(path))
                 return null;
             try
@@ -111,14 +143,45 @@ namespace Freetime_Planner
                 return null;
             }
         }
-
-        public static string RecommendedFilmPosterID(Film.FilmObject film)
+        
+        public static string RecommendedFilmPosterID(Film.FilmObject film, out string fullID)
         {
+            fullID = null;
             string path = String.Format("film_{0}_{1}.jpg", film.data.filmId, Guid.NewGuid());
             WebClient wc = new WebClient();
             if (film.data.posterUrl == null || film.data.posterUrl == string.Empty)
                 return null;
             wc.DownloadFile(film.data.posterUrl, path);
+
+            Bitmap bMap = new Bitmap(path);
+            if (TooSmallSize(bMap))
+            {
+                //221х136 - минимальный размер изображения в карусели
+                bMap.Dispose();
+                if (System.IO.File.Exists(path))
+                    System.IO.File.Delete(path);
+                return null;
+            }
+                try
+            {
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended, Bot.group_id);
+                var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+                var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                {
+                    SaveFileResponse = responseFile,
+                    AlbumId = Bot.album_id_recommended,
+                    GroupId = Bot.group_id
+                }).First();
+                 fullID = $"-{Bot.group_id}_{photo.Id}";
+            }
+            catch (Exception e)
+            {
+                WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
+                fullID = null;
+                return null;
+
+            }
+            //
             if (!CropAndOverwrite(path))
                 return null;
             try
@@ -289,6 +352,9 @@ namespace Freetime_Planner
             }
         }
 
+
+
+
         /*
         /// <summary>
         /// Возвращает ID постера фильма
@@ -406,8 +472,10 @@ namespace Freetime_Planner
         }
         */
 
-
-
+        private static bool TooSmallSize(Bitmap bMap)
+        {
+            return (bMap.Width < 221 || bMap.Height < 136);
+        }
         //--------------------------------------------------Приватные методы по обработке фотографий-----------------------------------------
 
         /// <summary>
@@ -418,7 +486,7 @@ namespace Freetime_Planner
         {
             //Load the original image
             Bitmap bMap = new Bitmap(imgPath);
-            if (bMap.Width < 221 || bMap.Height < 136)
+            if (TooSmallSize(bMap))
             {
                 //221х136 - минимальный размер изображения в карусели
                 bMap.Dispose();

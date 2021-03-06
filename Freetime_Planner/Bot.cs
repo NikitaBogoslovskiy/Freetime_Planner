@@ -459,7 +459,7 @@ namespace Freetime_Planner
                     VkNet.Model.User Sender = vkapi.Users.Get(new long[] { messages[i].PeerId.Value },ProfileFields.Online)[0];
                     IsMobileVersion = Sender.OnlineMobile;
                      user = Users.GetUser(Sender, out bool IsOld);
-                    if (message.Attachments.Count != 0)
+                    if (message.Attachments.Count != 0) 
                     {
                         if (message.Attachments[0].Instance is AudioMessage am)
                         {
@@ -808,7 +808,7 @@ namespace Freetime_Planner
                                     }
                                     user.RemoveLevel();
                                         break;
-                                   
+
                                 //"Планирую посмотреть"
                                 case PlanToWatch:
                                     keyboard = Keyboards.FilmPlanToWatch();
@@ -820,11 +820,19 @@ namespace Freetime_Planner
                                 //"Рандомный фильм"
                                 case Modes.Mode.Random:
                                     SendMessage("Ищу случайные фильмы...");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    template = Film.Methods.Random();
-                                    keyboard = null;
-                                    SendMessage("Результаты поиска");
-                                    template = null;
+                                    if (IsMobileVersion != null)
+                                    {
+                                        vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                        template = Film.Methods.Random();
+                                        keyboard = null;
+                                        SendMessage("Результаты поиска");
+                                        template = null;
+                                    }
+                                    else
+                                    {
+                                        vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+
+                                    }
                                     user.RemoveLevel(); 
                                     break;
 

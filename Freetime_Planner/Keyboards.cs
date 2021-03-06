@@ -153,18 +153,14 @@ namespace Freetime_Planner
 
             return carousel;
         }
-     
+        // [-|-----------"Мои рекомендации" если зашёл не с мобильного приложения---------------------
         public static void FilmMyRecommendationsMessage(IEnumerable<Film.FilmObject> farray)
         {
-            int i = 0;
-            var photo = Bot.private_vkapi.Photo.GetById(farray.Select(f => f.data.VKPhotoID));
             foreach (var f in farray)
             {
-               Bot.attachments = new List<MediaAttachment> { Bot.private_vkapi.Photo.GetById(new string[]{ f.data.VKPhotoID})[0] };
+               Bot.attachments = new List<MediaAttachment> { Bot.private_vkapi.Photo.GetById(new string[]{ f.data.VKPhotoID_2})[0] };
                Bot.SendMessage(FilmMessage(f));
-                ++i;
             }
-      
         }
 
         public static string FilmMessage(Film.FilmObject film)
@@ -178,6 +174,7 @@ namespace Freetime_Planner
             string str = film.data.nameRu + "\nжанр: " + string.Join(',',film.data.genres.Select(g =>g.genre)) + ".";
             return str;
         }
+        // ------------------------------------------------------------------------------------------_|_ ]
 
         /// <summary>
         /// Возвращает один элемент карусели фильмов-рекомендаций
@@ -301,6 +298,75 @@ namespace Freetime_Planner
                 return true;
             }
         }
+        // ------------Рандомный фильм если зашёл не с мобильного приложения---------------------
+        /*public void  RandomFilmResultsMessage(RandomFilms.Results results)
+        {
+            IEnumerable<RandomFilms.Film> films = results.films.Shuffle().Take(3);
+           
+            List<string> s = new List<string>();
+         // Bot.attachments = new List<MediaAttachment> { Attachments.PosterObject(films.data.posterUrl, films.data.filmId.ToString()) };
+
+            Parallel.ForEach(films, (film, state) =>
+            {
+                string message_part = "";
+                if (MessageRandomFilmResult(film, ref message_part))
+                    s.Add(message_part);
+            });
+           if (s.Count != 0)
+                foreach (var film in films)
+                {
+                    Bot.attachments = Attachments.RandomFilmPosterID(film);
+                    Bot.SendMessage(film);
+                }
+            else
+            {
+                FilmMyRecommendationsMessage(PopularFilms.Shuffle().Take(3).Select(kv => kv.Value));
+                Console.WriteLine("Костыль"); 
+            }
+
+           
+        }*/
+
+
+      /*  public static bool MessageRandomFilmResult(RandomFilms.Film film, ref string template_part)
+        {
+             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+           // var genres = string.Join('*', film.genres.Select(g => g.genre));
+            button.AddButton("Подробнее", $"f;;;{film.filmId};;;", Positive, "text");
+            button.SetInline();
+            Bot.keyboard = button.Build();
+            //
+               
+
+            
+            
+            //
+            //var element = new CarouselElement();
+            element.Title = film.nameRu;
+            element.Description = genres.Replace("*", ", ");
+            element.Buttons = button.Build().Buttons.First();
+            element.PhotoId = Attachments.RandomFilmPosterID(film);
+            if (element.PhotoId == null)
+                return false;
+            else
+            {
+                                                              // genres.Replace("*", ", ");
+                template_part =  film.nameRu+ "\nжанр: " + string.Join(',', film.data.genres.Select(g => g.genre)) + ".";
+                return true;
+            }
+        }*/
+
+
+
+
+
+
+
+
+
+
+
+        // |||||||||||||||||||||| Рандомный фильм если зашёл не с мобильного приложения||||||||||||||||||||||||||||||| _|_ |_|
 
         /// <summary>
         /// "Фильмы"->"Планирую посмотреть"

@@ -130,10 +130,12 @@ namespace Freetime_Planner
                         if (film != null)
                         {
                             film.Priority = 1;
-                            film.data.VKPhotoID = Attachments.PopularFilmPosterID(film);
+                            film.data.VKPhotoID = Attachments.PopularFilmPosterID(film, out var VKPhotoID2 );
+                            film.data.VKPhotoID_2 = VKPhotoID2;
                             //проверка валидности загруженной фотографии
                             if (film.data.VKPhotoID != null)
                                 res[id] = film;
+
                         }
                     }
                 }
@@ -192,6 +194,8 @@ namespace Freetime_Planner
             public List<string> facts { get; set; }
             public List<object> seasons { get; set; }
             public string VKPhotoID { get; set; }
+            public string VKPhotoID_2 { get; set; }
+
         }
 
         /// <summary>
