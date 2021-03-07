@@ -185,7 +185,8 @@ namespace Freetime_Planner
             if(b)
             Bot.SendMessage("Рекомендуемые фильмы");
             //
-            foreach (var m in arr) {
+            foreach(var m in arr)
+            {
                 Bot.attachments = new List<MediaAttachment> { m.Item2 };
                 Bot.keyboard = m.Item3;
                 Bot.SendMessage(m.Item1);
@@ -202,7 +203,7 @@ namespace Freetime_Planner
                 button.SetInline();
                 more = button.Build();
             
-            string str = film.data.nameRu + "\nжанр: " + string.Join(',',film.data.genres.Select(g =>g.genre)) + ".";
+            string str = film.data.nameRu + "\nЖанр: " + string.Join(',',film.data.genres.Select(g =>g.genre));
             return str;
         }
         //-----------------------------"_|_"---------------------------------------
@@ -222,7 +223,7 @@ namespace Freetime_Planner
             var carousel = new MessageTemplate();
             carousel.Type = Carousel;
             var arr = new List<CarouselElement>();
-            Parallel.ForEach(films, (film, state) =>
+            Parallel.ForEach(films, (film) =>
             {
                 CarouselElement template_part = null;
                 if (CarouselFilmResult(film, ref template_part))
@@ -266,23 +267,24 @@ namespace Freetime_Planner
         {
             IEnumerable<FilmResults.Film> films = results.films.Where(f => !f.nameRu.EndsWith("(сериал)") && !f.nameRu.EndsWith("(мини-сериал)")).Take(3);
             var arr = new List<(string, Photo, MessageKeyboard)>();
-            Parallel.ForEach(films, (film, state) =>
+            Parallel.ForEach(films, (film) =>
             {
-                string message_part = null;
-                if (MessageFilmResult(film, out message_part, out Photo photo, out var more))
+                if (MessageFilmResult(film, out var message_part, out Photo photo, out var more))
                     arr.Add((message_part, photo, more));
             });
-            Bot.SendMessage("Результаты поиска");
             if (arr.Count != 0)
-                foreach (var m in arr)
+            {
+                Bot.SendMessage("Результаты поиска");
+                foreach(var m in arr)
                 {
                     Bot.attachments = new List<MediaAttachment> { m.Item2 };
                     Bot.keyboard = m.Item3;
                     Bot.SendMessage(m.Item1);
                 }
+            }
             else
             {
-                Bot.attachments =null;
+                Bot.attachments = null;
                 Bot.keyboard = null;
                 Bot.SendMessage("К сожалению, я не смог найти такой фильм... 😔");
             }
@@ -305,7 +307,7 @@ namespace Freetime_Planner
             //достаём постер
             photo = Attachments.PosterObject(film.posterUrl, film.filmId.ToString());
             //готовим сообщение
-            message_part = " " + film.nameRu + "\nжанр: " + string.Join(", ", film.genres.Select(g => g.genre)) + ".";
+            message_part = " " + film.nameRu + "\nЖанр: " + string.Join(", ", film.genres.Select(g => g.genre));
             //Начинаем Поиск по названию
             return true;
 
@@ -335,7 +337,7 @@ namespace Freetime_Planner
             IEnumerable<RandomFilms.Film> films = results.films.Shuffle().Take(3);
             
             var arr = new List<CarouselElement>();
-            Parallel.ForEach(films, (film, state) =>
+            Parallel.ForEach(films, (film) =>
             {
                 CarouselElement template_part = null;
                 if (CarouselRandomFilmResult(film, ref template_part))
@@ -392,24 +394,26 @@ namespace Freetime_Planner
 
             var arr = new List<(string, Photo, MessageKeyboard)>();
             // паралельно создаём три фильма для рандома
-            Parallel.ForEach(films, (film, state) =>
+            Parallel.ForEach(films, (film) =>
             {
                // string message_part = null;//название,жанры одного фильма/сообщения
                 MessageRandomFilmResult(film, out var message_part, out var photo, out var more);
-                var tuple = (message_part, photo, more);
-                arr.Add(tuple);
+                arr.Add((message_part, photo, more));
             });
-            Bot.SendMessage("Результаты поиска");
+            
             if (arr.Count != 0)
-            foreach (var m in  arr)
+            {
+                Bot.SendMessage("Результаты поиска");
+                foreach(var m in arr)
                 {
                     Bot.attachments = new List<MediaAttachment> { m.Item2 };
-                    Bot.keyboard = m.Item3; 
+                    Bot.keyboard = m.Item3;
                     Bot.SendMessage(m.Item1);
-                }   
+                }
+            }
             else
             {
-                FilmMyRecommendationsMessage(PopularFilms.Shuffle().Take(3).Select(kv => kv.Value),false);
+                FilmMyRecommendationsMessage(PopularFilms.Shuffle().Take(3).Select(kv => kv.Value), false);
                 Console.WriteLine("Костыль");
             }
 
@@ -430,7 +434,7 @@ namespace Freetime_Planner
                 //достаём постер
                  photo = Attachments.PosterObject(film.posterUrl, film.filmId.ToString());
                 //готовим сообщение
-                message_part = " " + film.nameRu   +"\nжанр: " + string.Join(", ", film.genres.Select(g => g.genre)) + ".";
+                message_part = " " + film.nameRu   +"\nЖанр: " + string.Join(", ", film.genres.Select(g => g.genre));
                 //добро пожаловать в Рандом
         }
 
@@ -575,7 +579,7 @@ namespace Freetime_Planner
 
         public static void TVMyRecommendationsMessage(IEnumerable<TVObject> tvs)
         {
-            foreach (var f in tvs)
+            foreach(var f in tvs)
             {
                 Bot.attachments = new List<MediaAttachment> { Bot.private_vkapi.Photo.GetById(new string[] { f.data.VKPhotoID })[0] };
                 Bot.SendMessage(TVMessage(f));
@@ -588,7 +592,7 @@ namespace Freetime_Planner
             button.SetInline();
             Bot.keyboard = button.Build();
 
-            string str = tv.data.nameRu + "\nжанр: " + string.Join(',', tv.data.genres.Select(g => g.genre)) + ".";
+            string str = tv.data.nameRu.Replace("(сериал)","") + "\nЖанр: " + string.Join(',', tv.data.genres.Select(g => g.genre));
             return str;
 
         }
@@ -646,18 +650,19 @@ namespace Freetime_Planner
             var arr = new List<(string, Photo, MessageKeyboard)>();
             Parallel.ForEach(films, (film) =>
             {
-                string message_part = null;
-                if (MessageTVResult(film, out message_part, out Photo photo, out var more))
+                if (MessageTVResult(film, out var message_part, out Photo photo, out var more))
                     arr.Add((message_part, photo, more));
             });
-            Bot.SendMessage("Результаты поиска");
             if (arr.Count != 0)
-                foreach (var m in arr)
+            {
+                Bot.SendMessage("Результаты поиска");
+                foreach(var m in arr)
                 {
                     Bot.attachments = new List<MediaAttachment> { m.Item2 };
                     Bot.keyboard = m.Item3;
                     Bot.SendMessage(m.Item1);
                 }
+            }
             else
             {
                 Bot.attachments = null;
@@ -683,7 +688,7 @@ namespace Freetime_Planner
             //достаём постер
             photo = Attachments.PosterObject(film.posterUrl, film.filmId.ToString());
             //готовим сообщение
-            message_part = " " + film.nameRu + "\nжанр: " + string.Join(", ", film.genres.Select(g => g.genre)) + ".";
+            message_part = " " + film.nameRu.Replace("(сериал)", "") + "\nЖанр: " + string.Join(", ", film.genres.Select(g => g.genre));
             //Начинаем Поиск по названию
             return true;
 
@@ -751,36 +756,36 @@ namespace Freetime_Planner
 
         public static void RandomTVResultsMessage(RandomTV.Results results)
         {    //проверка
-            Random r = new Random();
             if (results == null || results.pagesCount == 0)
             {
-                TVMyRecommendations(PopularTV.Shuffle().Take(3).Select(kv => kv.Value));
-                Console.WriteLine("Костыль1");
+                TVMyRecommendationsMessage(PopularTV.Shuffle().Take(3).Select(kv => kv.Value));
+                Console.WriteLine("Костыль");
                 return;
             }
             
-            RandomTV.Film film = results.films[r.Next(0,results.films.Count())];
-           // var arr = new List<(string, Photo, MessageKeyboard)>();
+            IEnumerable<RandomTV.Film> films = results.films.Shuffle().Take(3);
+            var arr = new List<(string, Photo, MessageKeyboard)>();
             // паралельно создаём три фильма для рандома
-           /* Parallel.ForEach(films, (film, state) =>
-            {*///foreach (var film in films) { 
+            Parallel.ForEach(films, (film) =>
+            {
                 // string message_part = null;//название,жанры одного фильма/сообщения
                 MessageRandomTVResult(film, out var message_part, out var photo, out var more);
-                var tuple = (message_part, photo, more);
-              //  arr.Add(tuple);
-           // }
-            Bot.SendMessage("Результаты поиска");
-            if (photo!=null)
-              //  foreach (var m in arr)
-               {
+                arr.Add((message_part, photo, more));
+            });
+            if (arr.Count != 0)
+            {
+                Bot.SendMessage("Результаты поиска");
+                foreach(var tuple in arr)
+                {
                     Bot.attachments = new List<MediaAttachment> { tuple.Item2 };
                     Bot.keyboard = tuple.Item3;
                     Bot.SendMessage(tuple.Item1);
                 }
+            }
             else
             {
-                TVMyRecommendations(PopularTV.Shuffle().Take(3).Select(kv => kv.Value));
-                Console.WriteLine("Костыль2");
+                TVMyRecommendationsMessage(PopularTV.Shuffle().Take(3).Select(kv => kv.Value));
+                Console.WriteLine("Костыль");
             }
 
 
@@ -800,7 +805,7 @@ namespace Freetime_Planner
             //достаём постер
             photo = Attachments.PosterObject(film.posterUrl, film.filmId.ToString());
             //готовим сообщение
-            message_part = " " + film.nameRu + "\nжанр: " + string.Join(", ", film.genres.Select(g => g.genre)) + ".";
+            message_part = " " + film.nameRu.Replace("(сериал)", "") + "\nЖанр: " + string.Join(", ", film.genres.Select(g => g.genre));
             //добро пожаловать в Рандом
         }
 
