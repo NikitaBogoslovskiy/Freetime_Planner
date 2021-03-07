@@ -169,7 +169,9 @@ namespace Freetime_Planner
 
         public void GetFilmRecommendationsMessage()
         {
-             Keyboards.FilmMyRecommendationsMessage(FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
+            
+            Keyboards.FilmMyRecommendationsMessage(FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
+
         }
 
         /// <summary>
@@ -382,7 +384,9 @@ namespace Freetime_Planner
                         if (film == null)
                             continue;
                         film.Priority = 2;
-                        film.data.VKPhotoID = Attachments.RecommendedFilmPosterID(film);
+                        
+                        film.data.VKPhotoID   = Attachments.RecommendedFilmPosterID(film);
+                      //  film.data.VKPhotoID_2 = full_photo_ID ;
                         //проверка валидности изображения
                         if (film.data.VKPhotoID != null)
                         {
