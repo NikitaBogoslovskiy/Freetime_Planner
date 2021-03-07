@@ -676,9 +676,13 @@ namespace Freetime_Planner
                                 //"Хочу посмотреть"
                                 case WantToWatch:
                                     if (user.AddPlannedFilm(p.nameRu, p.nameEn, p.date, p.filmId))
+                                    {
+                                        if (user.MailFunction && User.StringToDate(p.date).CompareTo(DateTime.Now) < 0)
+                                            user.AddMailObjectAsync(p.filmId, true, p.nameRu, p.nameEn, p.date);
                                         SendMessage("Добавлено в список планируемых фильмов");
+                                    }
                                     else
-                                        SendMessage("Фильм уже есть в списке планируемых, я о нем помню 😉");
+                                        SendMessage("Фильм уже есть в списке планируемых, я о нем помню 😉");   
                                     user.RemoveLevel();
                                     break;
 
@@ -747,7 +751,7 @@ namespace Freetime_Planner
                                 case Yes:
                                     user.LikeFilm(p.nameEn);
                                     if (user.MailFunction)
-                                        user.AddMailObjectAsync(p.filmId);
+                                        user.AddMailObjectAsync(p.filmId, false);
                                     SendMessage("Круто! Буду советовать похожие");
                                     user.RemoveLevel();
                                     break;
@@ -943,7 +947,7 @@ namespace Freetime_Planner
                                 case Yes:
                                     user.LikeTV(p.nameEn);
                                     if (user.MailFunction)
-                                        user.AddMailObjectAsync(p.filmId);
+                                        user.AddMailObjectAsync(p.filmId, false);
                                     SendMessage("Круто! Буду советовать похожие");
                                     user.RemoveLevel();
                                     break;
@@ -1365,7 +1369,7 @@ namespace Freetime_Planner
         {
             lock (PFTsynclock)
             {
-                if (DateTime.Now.CompareTo(Film.LastPopularFilmsUpdate.AddDays(update_time)) != -1)
+                /*if (DateTime.Now.CompareTo(Film.LastPopularFilmsUpdate.AddDays(update_time)) != -1)
                 {
                     Film.UpdatePopularFilms();
                     Film.LastPopularFilmsUpdate = DateTime.Now;
@@ -1376,7 +1380,7 @@ namespace Freetime_Planner
                     TV.UpdatePopularTV();
                     TV.LastPopularTVUpdate = DateTime.Now;
                     TV.UnloadPopularTV();
-                }
+                }*/
             }
         }
 
@@ -1441,7 +1445,7 @@ namespace Freetime_Planner
                     ServiceClass.service_data.ResetGoogleRequests();
 
                 //рассылка кадров, фактов и саундтрека
-                if (12 <= DateTime.Now.Hour && DateTime.Now.Hour <= 22)
+                if (12 <= DateTime.Now.Hour && DateTime.Now.Hour <= 19)
                 {
                     var r = new Random();
                     foreach (var p in Users.Users_Dict.Values.Where(u => u.MailFunction))
@@ -1449,15 +1453,20 @@ namespace Freetime_Planner
                         if (DateTime.Now.CompareTo(p.NextMail) >= 0 && p.MailObjects.Count != 0)
                         {
                             var mail = p.MailObjects.Dequeue();
-                            attachments = new List<MediaAttachment>();
-                            attachments.AddRange(mail.Posters.Select(p => p as MediaAttachment));
-                            if (mail.SoundTrack != null && mail.SoundTrack.Count != 0)
-                                attachments.AddRange(mail.SoundTrack.Select(s => s as MediaAttachment));
                             string message = $"{mail.Name} ({mail.Year})";
-                            if (mail.Facts != null)
+                            if (mail.IsTrailer)
+                                attachments = new List<MediaAttachment> { mail.Trailer };
+                            else
                             {
-                                message += "\n\n";
-                                message += string.Join("\n", mail.Facts.Select(f => $"✅ {f}"));
+                                attachments = new List<MediaAttachment>();
+                                attachments.AddRange(mail.Posters.Select(p => p as MediaAttachment));
+                                if (mail.SoundTrack != null && mail.SoundTrack.Count != 0)
+                                    attachments.AddRange(mail.SoundTrack.Select(s => s as MediaAttachment));
+                                if (mail.Facts != null)
+                                {
+                                    message += "\n\n";
+                                    message += string.Join("\n", mail.Facts.Select(f => $"✅ {f}"));
+                                }
                             }
                             var previous_user = user;
                             user = p;
@@ -1468,6 +1477,7 @@ namespace Freetime_Planner
                             p.NextMail = new DateTime(next.Year, next.Month, next.Day, r.Next(12, 21), 0, 0);
                         }
                     }
+                    Users.Unload();
                 }
             }
         }

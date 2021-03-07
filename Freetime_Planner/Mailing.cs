@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using VkNet.Model.Attachments;
+using System.Net;
 
 namespace Freetime_Planner
 {
@@ -18,9 +19,14 @@ namespace Freetime_Planner
             public List<Photo> Posters { get; set; }
             public List<string> Facts { get; set; }
             public List<Audio> SoundTrack { get; set; }
+            public Video Trailer { get; set; }
             public bool IsValid = false;
-            public MailObject(string filmID)
+            public bool IsTrailer { get; set; }
+            public MailObject() { }
+
+            public void createPostersFacts(string filmID)
             {
+                IsTrailer = false;
                 var client1 = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/" + filmID);
                 var request1 = new RestRequest(Method.GET);
                 request1.AddHeader("X-API-KEY", Bot._kp_key);
@@ -64,6 +70,43 @@ namespace Freetime_Planner
                     Year = year;
                     SoundTrack = soundtrack;
                 }
+            }
+
+            public void createTrailer(string filmid, string ruName, string engName, string year)
+            {
+                IsTrailer = true;
+                var wc = new WebClient();
+                var client = new RestSharp.RestClient("https://www.googleapis.com/youtube/v3/search");
+                var request = new RestRequest(Method.GET);
+                request.AddQueryParameter("key", Bot._youtube_key);
+                request.AddQueryParameter("part", "snippet");
+                string query;
+                if (ruName != null)
+                    query = $"{ruName} {year} трейлер";
+                else
+                    query = $"{engName} {year} trailer";
+                request.AddQueryParameter("q", query);
+                request.AddQueryParameter("videoDuration", "short");
+                request.AddQueryParameter("type", "video");
+                IRestResponse response = client.Execute(request);
+                try
+                {
+                    var results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content);
+                    Trailer = Bot.private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
+                    {
+                        Link = $"https://www.youtube.com/watch?v={results.items[0].id.videoId}"
+                    });
+                    wc.DownloadString(Trailer.UploadUrl);
+                    IsValid = true;
+                }
+                catch(Exception)
+                {
+                    IsValid = false;
+                    return;
+                }
+                id = filmid;
+                Name = ruName ?? engName;
+                Year = year;
             }
         }
 

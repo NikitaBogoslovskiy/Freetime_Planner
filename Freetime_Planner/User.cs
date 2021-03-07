@@ -139,14 +139,18 @@ namespace Freetime_Planner
             //Bot.SendMessage("Жми любую кнопку");
         }
 
-        public async void AddMailObjectAsync(string id)
+        public async void AddMailObjectAsync(string id, bool isTrailer, string ruName = null, string engName = null, string date = null)
         {
-            await Task.Run(() => AddMailObject(id));
+            await Task.Run(() => AddMailObject(id, isTrailer, ruName, engName, date));
         }
 
-        public void AddMailObject(string id)
+        public void AddMailObject(string id, bool isTrailer, string ruName = null, string engName = null, string date = null)
         {
-            var mail = new Mailing.MailObject(id);
+            var mail = new Mailing.MailObject();
+            if (isTrailer)
+                mail.createTrailer(id, ruName, engName, date.Substring(0, 4));
+            else
+                mail.createPostersFacts(id);
             if (mail.IsValid && !MailObjects.Any(o => o.id == id))
                 MailObjects.Enqueue(mail);
             Users.Unload();
