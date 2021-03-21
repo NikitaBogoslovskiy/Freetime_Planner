@@ -119,7 +119,7 @@ namespace Freetime_Planner
             button.AddLine();
             button.AddButton("Посмотрел", $"f;;{nameEn};{filmID};;;", Primary, "text");
             button.AddLine();
-            if (ServiceClass.service_data.google_requests <= 100 && digital_release != null && DateTime.Now.CompareTo(User.StringToDate(digital_release)) >= 0)
+            if (ServiceClass.service_data.google_requests < 100 && digital_release != null && DateTime.Now.CompareTo(User.StringToDate(digital_release)) >= 0)
             {
                 button.AddButton("Где посмотреть", $"f;{nameRu};;;{date};;{digital_release}", Primary, "text");
                 button.AddLine();
@@ -296,16 +296,15 @@ namespace Freetime_Planner
         public static bool MessageFilmResult(FilmResults.Film film, out string message_part, out Photo photo,out MessageKeyboard more)
         {
             message_part = null; photo = null; more = null;
-             if (film.filmId.ToString() == null)
-                 return false;
-
+            if (film.filmId.ToString() == null)
+                return false;
+            if (!Attachments.PosterObject(film.posterUrl, film.filmId.ToString(), out photo))
+                return false;
             //создаём клавиатуру
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             button.AddButton("Подробнее", $"f;;;{film.filmId};;;", Positive, "text");
             button.SetInline();
             more = button.Build();
-            //достаём постер
-            photo = Attachments.PosterObject(film.posterUrl, film.filmId.ToString());
             //готовим сообщение
             message_part = " " + film.nameRu + "\nЖанр: " + string.Join(", ", film.genres.Select(g => g.genre));
             //Начинаем Поиск по названию
@@ -397,8 +396,8 @@ namespace Freetime_Planner
             Parallel.ForEach(films, (film) =>
             {
                // string message_part = null;//название,жанры одного фильма/сообщения
-                MessageRandomFilmResult(film, out var message_part, out var photo, out var more);
-                arr.Add((message_part, photo, more));
+                if (MessageRandomFilmResult(film, out var message_part, out var photo, out var more))
+                    arr.Add((message_part, photo, more));
             });
             
             if (arr.Count != 0)
@@ -424,18 +423,22 @@ namespace Freetime_Planner
         /// </summary>
         /// <param name="film"></param>
         /// <returns></returns>
-        public static void MessageRandomFilmResult(RandomFilms.Film film, out string message_part, out Photo photo, out MessageKeyboard grok)
+        public static bool MessageRandomFilmResult(RandomFilms.Film film, out string message_part, out Photo photo, out MessageKeyboard grok)
         {
-                //создаём клавиатуру
-                var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
-                button.AddButton("Подробнее", $"f;;;{film.filmId};;;", Positive, "text");
-                button.SetInline();
-                grok = button.Build();
-                //достаём постер
-                 photo = Attachments.PosterObject(film.posterUrl, film.filmId.ToString());
-                //готовим сообщение
-                message_part = " " + film.nameRu   +"\nЖанр: " + string.Join(", ", film.genres.Select(g => g.genre));
-                //добро пожаловать в Рандом
+            message_part = null;
+            photo = null;
+            grok = null;
+            if (!Attachments.PosterObject(film.posterUrl, film.filmId.ToString(), out photo))
+                return false;
+            //создаём клавиатуру
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            button.AddButton("Подробнее", $"f;;;{film.filmId};;;", Positive, "text");
+            button.SetInline();
+            grok = button.Build();
+            //готовим сообщение
+            message_part = " " + film.nameRu   +"\nЖанр: " + string.Join(", ", film.genres.Select(g => g.genre));
+            //добро пожаловать в Рандом
+            return true;
         }
 
 
@@ -522,7 +525,7 @@ namespace Freetime_Planner
         ///Создаёт клавиатуру в сообщении для кнопоки "Сериалы"->"Поиск по названию"  
         /// </summary>
         /// <button></button>     
-        public static MessageKeyboard TVSearch(string nameRu, string nameEn, string filmID, string genres)
+        public static MessageKeyboard TVSearch(string nameRu, string nameEn, string filmID, string genres, string date)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
 
@@ -532,6 +535,11 @@ namespace Freetime_Planner
             button.AddLine();
             button.AddButton("Посмотрел", $"t;;{nameEn};{filmID};;;", Primary, "text");
             button.AddLine();
+            if (ServiceClass.service_data.google_requests < 100 && date != null && DateTime.Now.CompareTo(User.StringToDate(date)) >= 0)
+            {
+                button.AddButton("Где посмотреть", $"t;{nameRu};;;{date};;", Primary, "text");
+                button.AddLine();
+            }
             button.AddButton("Саундтрек", $"t;{nameRu};{nameEn};;;;", Primary, "text");
             button.AddButton("Еда", $"t;;;;;{genres};", Primary, "text");
             button.AddLine();
@@ -680,13 +688,13 @@ namespace Freetime_Planner
             if (film.filmId.ToString() == null)
                 return false;
 
+            if (!Attachments.PosterObject(film.posterUrl, film.filmId.ToString(), out photo))
+                return false;
             //создаём клавиатуру
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             button.AddButton("Подробнее", $"t;;;{film.filmId};;;", Positive, "text");
             button.SetInline();
             more = button.Build();
-            //достаём постер
-            photo = Attachments.PosterObject(film.posterUrl, film.filmId.ToString());
             //готовим сообщение
             message_part = " " + film.nameRu.Replace("(сериал)", "") + "\nЖанр: " + string.Join(", ", film.genres.Select(g => g.genre));
             //Начинаем Поиск по названию
@@ -769,8 +777,8 @@ namespace Freetime_Planner
             Parallel.ForEach(films, (film) =>
             {
                 // string message_part = null;//название,жанры одного фильма/сообщения
-                MessageRandomTVResult(film, out var message_part, out var photo, out var more);
-                arr.Add((message_part, photo, more));
+                if (MessageRandomTVResult(film, out var message_part, out var photo, out var more))
+                    arr.Add((message_part, photo, more));
             });
             if (arr.Count != 0)
             {
@@ -795,18 +803,22 @@ namespace Freetime_Planner
         /// </summary>
         /// <param name="film"></param>
         /// <returns></returns>
-        public static void MessageRandomTVResult(RandomTV.Film film, out string message_part, out Photo photo, out MessageKeyboard grok)
+        public static bool MessageRandomTVResult(RandomTV.Film film, out string message_part, out Photo photo, out MessageKeyboard grok)
         {
+            message_part = null;
+            photo = null;
+            grok = null;
+            if (!Attachments.PosterObject(film.posterUrl, film.filmId.ToString(), out photo))
+                return false;
             //создаём клавиатуру
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             button.AddButton("Подробнее", $"t;;;{film.filmId};;;", Positive, "text");
             button.SetInline();
             grok = button.Build();
-            //достаём постер
-            photo = Attachments.PosterObject(film.posterUrl, film.filmId.ToString());
             //готовим сообщение
             message_part = " " + film.nameRu.Replace("(сериал)", "") + "\nЖанр: " + string.Join(", ", film.genres.Select(g => g.genre));
             //добро пожаловать в Рандом
+            return true;
         }
 
 
@@ -837,7 +849,7 @@ namespace Freetime_Planner
         /// <returns></returns>
         public static MessageKeyboard RandomTV(string nameRu, string nameEn, string filmID, string genres)
         {
-            return TVSearch(nameRu, nameEn, filmID, genres);
+            return TVSearch(nameRu, nameEn, filmID, genres, "");
         }
 
         /// <summary>

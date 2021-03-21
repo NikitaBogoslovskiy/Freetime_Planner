@@ -121,4 +121,19 @@ namespace Freetime_Planner
             public List<Frame> frames { get; set; }
         }
     }
+
+    public class Trailer
+    {
+        public string url { get; set; }
+        public string name { get; set; }
+        public string site { get; set; }
+        public object size { get; set; }
+        public string type { get; set; }
+    }
+
+    public class MovieVideos
+    {
+        public List<Trailer> trailers { get; set; }
+        public List<object> teasers { get; set; }
+    }
 }

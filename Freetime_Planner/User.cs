@@ -64,6 +64,8 @@ namespace Freetime_Planner
 
         public Queue<Mailing.MailObject> MailObjects { get; set; }
 
+        public DateTime LastPlannedFilmsUpdate { get; set; }
+
         /// <summary>
         /// Конструктор пользователя
         /// </summary>
@@ -89,6 +91,7 @@ namespace Freetime_Planner
             var r = new Random();
             NextMail = new DateTime(next.Year, next.Month, next.Day, r.Next(12, 21), 0, 0);
             MailObjects = new Queue<Mailing.MailObject>();
+            LastPlannedFilmsUpdate = DateTime.Now;
         }
 
         /// <summary>
@@ -191,7 +194,7 @@ namespace Freetime_Planner
                     date = Film.Methods.ChangeDateType(PlannedFilms[1][i].data.premiereRu);
                 else
                     date = PlannedFilms[1][i].data.premiereRu;
-                res += $"{i + 1 + PlannedFilms[0].Count}. {PlannedFilms[1][i].data.nameRu ?? PlannedFilms[1][i].data.nameEn} ({date})";
+                res += $"{i + 1 + PlannedFilms[0].Count}. {PlannedFilms[1][i].data.nameRu ?? PlannedFilms[1][i].data.nameEn} ({date})\n";
             }
             return res;
         }
@@ -214,7 +217,11 @@ namespace Freetime_Planner
                 if (PlannedFilms[1].Any(f => f.data.filmId.ToString() == filmID))
                     return false;
                 else
-                    PlannedFilms[1].Add(new Film.FilmObject(nameRu, nameEn, Date, int.Parse(filmID)));
+                {
+                    var film = new Film.FilmObject(nameRu, nameEn, Date, int.Parse(filmID));
+                    PlannedFilms[1].Add(film);
+                    film.CreateTrailerAsync();
+                }
             }
             else
             {
@@ -239,6 +246,7 @@ namespace Freetime_Planner
             int count = dict.Count(kv => DateTime.Now.CompareTo(kv.Key) >= 0);
             PlannedFilms[0].AddRange(dict.Take(count).Select(kv => kv.Value));
             PlannedFilms[1] = dict.Skip(count).Select(kv => kv.Value).ToList();
+            LastPlannedFilmsUpdate = DateTime.Now;
         }
 
         /// <summary>
@@ -327,7 +335,7 @@ namespace Freetime_Planner
             var required_count = new_array.Count + 5;
 
             //поиск фильма в англоязычной базе данных с целью получения его ID
-            var client1 = new RestSharp.RestClient("https://api.themoviedb.org/3/search/movie");
+            var client1 = new RestSharp.RestClient("https://api.tmdb.org/3/search/movie");
             var request1 = new RestRequest(Method.GET);
             request1.AddQueryParameter("api_key", Bot._mdb_key);
             request1.AddQueryParameter("query", nameEn);
@@ -338,7 +346,7 @@ namespace Freetime_Planner
             string sid = deserialized1.results.First().id.ToString();
 
             //поиск в англоязычной базе данных рекомендуемых фильмов к данному, используя ID данного фильма
-            var client2 = new RestSharp.RestClient($"https://api.themoviedb.org/3/movie/{sid}/recommendations");
+            var client2 = new RestSharp.RestClient($"https://api.tmdb.org/3/movie/{sid}/recommendations");
             var request2 = new RestRequest(Method.GET);
             request2.AddQueryParameter("api_key", Bot._mdb_key);
             IRestResponse response2 = client2.Execute(request2);
@@ -474,7 +482,7 @@ namespace Freetime_Planner
             var required_count = new_array.Count + 5;
 
             //поиск сериала в англоязычной базе данных с целью получения его ID
-            var client1 = new RestSharp.RestClient("https://api.themoviedb.org/3/search/tv");
+            var client1 = new RestSharp.RestClient("https://api.tmdb.org/3/search/tv");
             var request1 = new RestRequest(Method.GET);
             request1.AddQueryParameter("api_key", Bot._mdb_key);
             request1.AddQueryParameter("query", nameEn);
@@ -485,7 +493,7 @@ namespace Freetime_Planner
             string sid = deserialized1.results.First().id.ToString();
 
             //поиск в англоязычной базе данных рекомендуемых сериалов к данному, используя ID данного сериала
-            var client2 = new RestSharp.RestClient($"https://api.themoviedb.org/3/tv/{sid}/recommendations");
+            var client2 = new RestSharp.RestClient($"https://api.tmdb.org/3/tv/{sid}/recommendations");
             var request2 = new RestRequest(Method.GET);
             request2.AddQueryParameter("api_key", Bot._mdb_key);
             IRestResponse response2 = client2.Execute(request2);

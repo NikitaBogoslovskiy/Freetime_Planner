@@ -1,4 +1,5 @@
 *.vs/
+*.git/
 /Freetime_Planner/bin/*
 /Freetime_Planner/obj/*
 /Freetime_Planner/Properties/*

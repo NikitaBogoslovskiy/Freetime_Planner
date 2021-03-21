@@ -289,6 +289,29 @@ namespace Freetime_Planner
             }
         }
 
+        public static bool PosterObject(string url, string filmID, out Photo photo)
+        {
+            string path = String.Format("film_{0}_{1}.jpg", filmID, Guid.NewGuid());
+            WebClient wc = new WebClient();
+            photo = null;
+            try
+            {
+                wc.DownloadFile(url, path);
+                if (!SizeIsWell(path))
+                    return false;
+                var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(Bot.user.ID);
+                var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+                photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
+                File.Delete(path);
+                return true;
+            }
+            catch (Exception e)
+            {
+                WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
+                return false;
+            }
+        }
+
         /*
         /// <summary>
         /// Возвращает ID постера фильма
@@ -409,6 +432,12 @@ namespace Freetime_Planner
 
 
         //--------------------------------------------------Приватные методы по обработке фотографий-----------------------------------------
+
+        public static bool SizeIsWell(string path)
+        {
+            Bitmap pic = new Bitmap(path);
+            return pic.Width >= 221 && pic.Height >= 136;
+        }
 
         /// <summary>
         /// Вспомогательная приватная функция, обрезающая изображения в отношении 13:8
