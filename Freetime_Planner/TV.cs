@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using VkNet.Enums.SafetyEnums;
 using VkNet.Model.Attachments;
@@ -21,7 +22,7 @@ namespace Freetime_Planner
         //Популярные сериалы
         #region PopularTV
         public static Dictionary<int, TVObject> PopularTV { get; set; }
-        public static string PopularTVPath = "PopularTV.json";
+        public static string PopularTVPath;
         public static DateTime LastPopularTVUpdate { get; set; }
 
         /// <summary>
@@ -65,7 +66,7 @@ namespace Freetime_Planner
             var res = new Dictionary<int, TVObject>();
 
             //добавление первой страницы сериалов
-            var clientA = new RestSharp.RestClient("https://api.themoviedb.org/3/tv/popular");
+            var clientA = new RestSharp.RestClient("https://api.tmdb.org/3/tv/popular");
             var requestA = new RestRequest(Method.GET);
             requestA.AddQueryParameter("api_key", Bot._mdb_key);
             requestA.AddQueryParameter("page", "1");
@@ -76,7 +77,7 @@ namespace Freetime_Planner
             var list = deserializedA.results;
 
             //добавление второй страницы сериалов
-            var clientB = new RestSharp.RestClient("https://api.themoviedb.org/3/tv/popular");
+            var clientB = new RestSharp.RestClient("https://api.tmdb.org/3/tv/popular");
             var requestB = new RestRequest(Method.GET);
             requestB.AddQueryParameter("api_key", Bot._mdb_key);
             requestB.AddQueryParameter("page", "2");
@@ -87,7 +88,7 @@ namespace Freetime_Planner
                 list.AddRange(deserializedB.results);
 
             //параллельный обход списка
-            Parallel.ForEach(list, (result) =>
+            foreach(var result in list)
             {
                 //запрос сериала по его названию
                 var KPclient1 = new RestSharp.RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
@@ -129,7 +130,7 @@ namespace Freetime_Planner
                         }
                     }
                 }
-            });
+            }
             PopularTV = res;
         }
         #endregion
@@ -250,7 +251,7 @@ namespace Freetime_Planner
 
                 var film = JsonConvert.DeserializeObject<TVObject>(response.Content);
                 attachments = new List<MediaAttachment> { Attachments.PosterObject(film.data.posterUrl, film.data.filmId.ToString()) };
-                keyboard = Keyboards.TVSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), string.Join("*", film.data.genres.Select(g => g.genre)));
+                keyboard = Keyboards.TVSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereRu);
                 return FullInfo(film);
             }
             public static string FullInfo(TV.TVObject tv)
@@ -258,7 +259,12 @@ namespace Freetime_Planner
                 TV.Data Data = tv.data;
                 string res = $"📺 {Data.nameRu ?? Data.nameEn} ({Data.year})";
                 if (tv.rating.rating.HasValue)
-                    res += $"\n⭐ {tv.rating.rating.Value}";
+                {
+                    if (tv.rating.rating.Value != 0)
+                        res += $"\n⭐ {tv.rating.rating.Value}";
+                    else if (tv.rating.ratingAwait != null)
+                        res += $"\n🏁 {tv.rating.ratingAwait}";
+                }
                 res += "\n";
                 if (Data.seasons != null)
                     res += $"\n📈 Сезонов: {Data.seasons.Count}";
@@ -292,12 +298,25 @@ namespace Freetime_Planner
                 request.AddQueryParameter("keyword", TVName);
                 IRestResponse response = client.Execute(request);
                 TVResults.Results results = JsonConvert.DeserializeObject<TVResults.Results>(response.Content);
-                if (results.pagesCount == 0)
+                if (results == null || results.pagesCount == 0)
                     return null;
                 else
                     return Keyboards.TVResults(results);
             }
-
+            //----not online---------------------------------------------------------
+            public static void Search_inMessage(string TVName)
+            {
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("keyword", TVName);
+                IRestResponse response = client.Execute(request);
+                TVResults.Results results = JsonConvert.DeserializeObject<TVResults.Results>(response.Content);
+                if (results == null || results.pagesCount == 0)
+                    SendMessage("К сожалению, я не смог найти такой сериал... 😔");
+                else
+                     Keyboards.TVResultsMessage(results);
+            }
             public static MessageTemplate Random()
             {
                 Random random = new Random();
@@ -320,7 +339,29 @@ namespace Freetime_Planner
                 var results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content);
                 return Keyboards.RandomTVResults(results);
             }
+            //------- not mobile -------
+            public static void Random_inMessage()
+            {
+                Random random = new Random();
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
+                //int filmYearUpperLine = random.Next(filmYearBottomLine + 5, DateTime.Now.Year+1);
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                //int filmRatingBottomLine = random.Next(4, 8);
 
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "TV_SHOW");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", Film.PopularGenres[random.Next(0, Film.PopularGenres.Length)].ToString());
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                //request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                //request.AddQueryParameter("ratingFrom", filmRatingBottomLine.ToString());
+                IRestResponse response = client.Execute(request);
+
+                var results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content);
+                Keyboards.RandomTVResultsMessage(results);
+            }
             public static bool Soundtrack(string TVName, List<Audio> audios, int count = 6)
             {
                 Yandex.Music.Api.Models.YandexAlbum album = null;
@@ -372,9 +413,44 @@ namespace Freetime_Planner
                 return video;
             }
 
-            public static MessageKeyboard ServiceLinks(string TVName, string year)
+            public static MessageKeyboard ServiceLinks(string TVName, string date)
             {
-                return null;
+                var client = new RestSharp.RestClient("https://www.googleapis.com/customsearch/v1");
+                var request = new RestRequest(Method.GET);
+                request.AddQueryParameter("key", _google_key);
+                request.AddQueryParameter("cx", _google_sid_series);
+                request.AddQueryParameter("q", $"{TVName} {date.Substring(0, 4)} сериал смотреть");
+                request.AddQueryParameter("num", "10");
+                IRestResponse response = client.Execute(request);
+                ServiceClass.service_data.IncGoogleRequests();
+                var results = JsonConvert.DeserializeObject<GoogleResponse>(response.Content);
+                var dict = new Dictionary<string, string>();
+                foreach (var item in results.items)
+                {
+                    if (Regex.IsMatch(item.link, @"https://megogo.net/ru/view/.+") && !dict.ContainsKey("MEGOGO"))
+                        dict["MEGOGO"] = item.link;
+                    else if (Regex.IsMatch(item.link, @"https://www.tvigle.ru/video/.+") && !dict.ContainsKey("TVIGLE"))
+                        dict["TVIGLE"] = item.link;
+                    else if (Regex.IsMatch(item.link, @"https://wink.rt.ru/media_items/.+") && !dict.ContainsKey("WINK"))
+                        dict["WINK"] = item.link;
+                    else if (Regex.IsMatch(item.link, @"https://okko.tv/serial/.+") && !dict.ContainsKey("OKKO"))
+                        dict["OKKO"] = item.link;
+                    else if (Regex.IsMatch(item.link, @"https://hd.kinopoisk.ru/film/.+") && !dict.ContainsKey("КИНОПОИСК"))
+                        dict["КИНОПОИСК"] = item.link;
+                    else if (Regex.IsMatch(item.link, @"https://www.kinopoisk.ru/series/.+") && !dict.ContainsKey("КИНОПОИСК") && item.title.Contains("смотреть онлайн"))
+                        dict["КИНОПОИСК"] = item.link;
+                    else if (Regex.IsMatch(item.link, @"https://www.netflix.com/ru/title/.+") && !dict.ContainsKey("NETFLIX"))
+                        dict["NETFLIX"] = item.link;
+                    else if (Regex.IsMatch(item.link, @"https://www.amediateka.ru/watch/series.+") && !dict.ContainsKey("AMEDIATEKA"))
+                        dict["AMEDIATEKA"] = item.link;
+                    else if (Regex.IsMatch(item.link, @"https://more.tv/.+") && !dict.ContainsKey("MORE"))
+                        dict["MORE"] = item.link;
+                    else if (Regex.IsMatch(item.link, @"https://www.tvzavr.ru/film/.+") && !dict.ContainsKey("TVZAVR"))
+                        dict["TVZAVR"] = item.link;
+                    if (dict.Count == 2)
+                        break;
+                }
+                return dict.Count == 0 ? null : Keyboards.ServiceLinks(dict);
             }
         }
     }

@@ -28,7 +28,7 @@ namespace Freetime_Planner
         //Популярные фильмы
         #region PopularFilms
         public static Dictionary<int, FilmObject> PopularFilms { get; set; }
-        public static string PopularFilmsPath = "PopularFilms.json";
+        public static string PopularFilmsPath;
         public static DateTime LastPopularFilmsUpdate { get; set; }
 
         /// <summary>
@@ -72,7 +72,7 @@ namespace Freetime_Planner
             var res = new Dictionary<int, FilmObject>();
 
             //добавление первой страницы фильмов
-            var clientA = new RestSharp.RestClient("https://api.themoviedb.org/3/movie/popular");
+            var clientA = new RestSharp.RestClient("https://api.tmdb.org/3/movie/popular");
             var requestA = new RestRequest(Method.GET);
             requestA.AddQueryParameter("api_key", Bot._mdb_key);
             requestA.AddQueryParameter("page", "1");
@@ -83,7 +83,7 @@ namespace Freetime_Planner
             var list = deserializedA.results;
 
             //добавление второй страницы фильмов
-            var clientB = new RestSharp.RestClient("https://api.themoviedb.org/3/movie/popular");
+            var clientB = new RestSharp.RestClient("https://api.tmdb.org/3/movie/popular");
             var requestB = new RestRequest(Method.GET);
             requestB.AddQueryParameter("api_key", Bot._mdb_key);
             requestB.AddQueryParameter("page", "2");
@@ -94,7 +94,7 @@ namespace Freetime_Planner
                 list.AddRange(deserializedB.results);
 
             //параллельный обход списка
-            Parallel.ForEach(list, (result, state) =>
+            foreach(var result in list)
             {
                 //запрос фильма по его названию
                 var KPclient1 = new RestSharp.RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
@@ -137,7 +137,7 @@ namespace Freetime_Planner
                         }
                     }
                 }
-            });
+            }
             PopularFilms = res;
         }
         #endregion
@@ -240,6 +240,7 @@ namespace Freetime_Planner
             public int Priority { get; set; }
             public bool TwoWeeksNotification { get; set; }
             public bool PremiereNotification { get; set; }
+            public NewTrailer Trailer { get; set; }
 
             public FilmObject(string nameRu, string nameEn, string date, int filmID)
             {
@@ -252,6 +253,55 @@ namespace Freetime_Planner
                 };
                 TwoWeeksNotification = false;
                 PremiereNotification = false;
+            }
+
+            public async void CreateTrailerAsync()
+            {
+                await Task.Run(() => CreateTrailer());
+            }
+            private void CreateTrailer()
+            {
+                var client = new RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{data.filmId}/videos");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                IRestResponse response = client.Execute(request);
+                var trailers = JsonConvert.DeserializeObject<MovieVideos>(response.Content).trailers.Where(t => t.site.ToLower() == "youtube");
+                if (trailers.Count() == 0)
+                    Trailer = new NewTrailer(new HashSet<string>());
+                else
+                    Trailer = new NewTrailer(trailers.Select(t => t.url).ToHashSet());
+                Trailer.IsNew = false;
+            }
+            public void UpdateTrailer()
+            {
+                var client = new RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{data.filmId}/videos");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                IRestResponse response = client.Execute(request);
+                var trailers = JsonConvert.DeserializeObject<MovieVideos>(response.Content).trailers.Where(t => t.site.ToLower() == "youtube");
+                var difference = trailers.Select(t => t.url).ToHashSet();
+                difference.SymmetricExceptWith(Trailer.Links);
+                if (difference.Count == 0)
+                    return;
+                var wc = new WebClient();
+                Trailer.Trailer = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
+                {
+                    Link = difference.First()
+                });
+                wc.DownloadString(Trailer.Trailer.UploadUrl);
+                Trailer.IsNew = true;
+                Trailer.Links.UnionWith(difference);
+            }
+        }
+
+        public class NewTrailer
+        {
+            public Video Trailer;
+            public bool IsNew;
+            public HashSet<string> Links;
+            public NewTrailer(HashSet<string> links)
+            {
+                Links = links;
             }
         }
         #endregion
@@ -293,7 +343,12 @@ namespace Freetime_Planner
                 Data filmData = film.data;
                 string res = $"📽 {filmData.nameRu ?? filmData.nameEn} ({filmData.year})";
                 if (film.rating.rating.HasValue)
-                    res += $"\n⭐ {film.rating.rating.Value}";
+                {
+                    if (film.rating.rating.Value != 0)
+                        res += $"\n⭐ {film.rating.rating.Value}";
+                    else if (film.rating.ratingAwait != null)
+                        res += $"\n🏁 {film.rating.ratingAwait}";
+                }
                 if (filmData.filmLength != null)
                     res += $"\n⏰ {filmData.filmLength}";
                 res += "\n";
@@ -376,12 +431,25 @@ namespace Freetime_Planner
                 request.AddQueryParameter("keyword", filmName);
                 IRestResponse response = client.Execute(request);
                 FilmResults.Results results = JsonConvert.DeserializeObject<FilmResults.Results>(response.Content);
-                if (results.pagesCount == 0)
+                if (results == null || results.pagesCount == 0)
                     return null;
                 else
                     return Keyboards.FilmResults(results);
             }
-
+            //not mobile
+            public static void Search_inMessage(string filmName)
+            {
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("keyword", filmName);
+                IRestResponse response = client.Execute(request);
+                FilmResults.Results results = JsonConvert.DeserializeObject<FilmResults.Results>(response.Content);
+                if (results == null || results.pagesCount == 0)
+                    Bot.SendMessage("К сожалению, я не смог найти такой фильм... 😔");
+                else
+                    Keyboards.FilmResultsMessage(results);
+            }
             /// <summary>
             /// Возвращает карусель из фильмов, которые были получены в результате случайного поиска фильма (используется класс FilmResults)
             /// </summary>
@@ -408,13 +476,36 @@ namespace Freetime_Planner
                 var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
                 return Keyboards.RandomFilmResults(results);
             }
+            //not mobile
+            public static void Random_inMessage()
+            {
+                Random random = new Random();
+                //int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
+                //int filmYearUpperLine = random.Next(filmYearBottomLine + 5, DateTime.Now.Year+1);
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                //int filmRatingBottomLine = random.Next(4, 8);
 
-            /// <summary>
-            /// Возвращает список аудиозаписей по названию фильма
-            /// </summary>
-            /// <param name="filmName"></param>
-            /// <returns></returns>
-            public static bool Soundtrack(string filmName, string date, List<Audio> audios, int count = 6)
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "FILM");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+                //request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                //request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                //request.AddQueryParameter("ratingFrom", filmRatingBottomLine.ToString());
+                IRestResponse response = client.Execute(request);
+
+                var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
+
+                 Keyboards.RandomFilmResultsMessage(results);
+            }
+                /// <summary>
+                /// Возвращает список аудиозаписей по названию фильма
+                /// </summary>
+                /// <param name="filmName"></param>
+                /// <returns></returns>
+                public static bool Soundtrack(string filmName, string date, List<Audio> audios, int count = 6)
             {
                 Yandex.Music.Api.Models.YandexAlbum album = null;
                 try
@@ -496,7 +587,11 @@ namespace Freetime_Planner
                         dict["MEGOGO"] = item.link;
                     else if (Regex.IsMatch(item.link, @"https://okko.tv/movie/.+") && !dict.ContainsKey("OKKO"))
                         dict["OKKO"] = item.link;
-                    if (dict.Count == 3)
+                    else if (Regex.IsMatch(item.link, @"https://hd.kinopoisk.ru/film/.+") && !dict.ContainsKey("КИНОПОИСК"))
+                        dict["КИНОПОИСК"] = item.link;
+                    else if (Regex.IsMatch(item.link, @"https://www.kinopoisk.ru/film/.+") && !dict.ContainsKey("КИНОПОИСК") && item.title.Contains("смотреть онлайн"))
+                        dict["КИНОПОИСК"] = item.link;
+                    if (dict.Count == 4)
                         break;
                 }
                 return Keyboards.ServiceLinks(dict);

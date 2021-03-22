@@ -110,6 +110,8 @@ namespace Freetime_Planner
         /// </summary>
         public static string _google_sid;
 
+        public static string _google_sid_series;
+
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены служебные изображения
         /// </summary>
@@ -198,6 +200,8 @@ namespace Freetime_Planner
 
         public static bool? IsMobileVersion;
 
+        public static Stopwatch timer = new Stopwatch();
+
 
 
         //Функции региона MainArea
@@ -208,16 +212,17 @@ namespace Freetime_Planner
         public Bot()
         {
             Init();
-            Users.Upload();
-            WritelnColor("Пользователи загружены", ConsoleColor.Green);
             AccessTokens.Upload();
             WritelnColor("Токены и ключи доступа загружены", ConsoleColor.Green);
+            Users.Upload();
+            WritelnColor("Пользователи загружены", ConsoleColor.Green);
             Keyboards.Init();
             WritelnColor("Клавиатуры инициализированы", ConsoleColor.Green);
             ServiceClass.UploadServiceData();
             WritelnColor("Сервисные данные загружены", ConsoleColor.Green);
             Food.UploadGenreFood();
             WritelnColor("Файл с жанрами и едой загружен", ConsoleColor.Green);
+            timer.Start();
         }
 
         /// <summary>
@@ -313,7 +318,8 @@ namespace Freetime_Planner
                     Template = template,
                     Attachments = attachments
                 });
-                WriteLine($"Успешно отправлен ответ: {message}");
+                WriteLine($"Успешно отправлен ответ: {message}\nВремя между сообщениями = {timer.ElapsedMilliseconds / 1000.0}");
+                timer.Restart();
                 Console.Beep();
             }
             catch (Exception e)
@@ -458,7 +464,7 @@ namespace Freetime_Planner
 
                     VkNet.Model.User Sender = vkapi.Users.Get(new long[] { messages[i].PeerId.Value },ProfileFields.Online)[0];
                     IsMobileVersion = Sender.OnlineMobile;
-                     user = Users.GetUser(Sender, out bool IsOld);
+                    user = Users.GetUser(Sender, out bool IsOld);
                     if (message.Attachments.Count != 0)
                     {
                         if (message.Attachments[0].Instance is AudioMessage am)
@@ -768,7 +774,7 @@ namespace Freetime_Planner
                                     {
                                         SendMessage("Ищу места для просмотра фильма...");
                                         keyboard = Film.Methods.ServiceLinks(p.nameRu, p.date);
-                                        SendMessage("Жми любую кнопку и смотри!");
+                                        SendMessage("Жми одну из кнопок и смотри!");
                                         keyboard = null;
                                     }
                                     else
@@ -805,7 +811,7 @@ namespace Freetime_Planner
                                     {
                                       
                                         keyboard = null;
-                                        SendMessage("Рекомендуемые фильмы");
+                                        
                                         user.GetFilmRecommendationsMessage();
                                         attachments = null;
                                         keyboard = null;
@@ -824,11 +830,23 @@ namespace Freetime_Planner
                                 //"Рандомный фильм"
                                 case Modes.Mode.Random:
                                     SendMessage("Ищу случайные фильмы...");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    template = Film.Methods.Random();
-                                    keyboard = null;
-                                    SendMessage("Результаты поиска");
-                                    template = null;
+                                    if (IsMobileVersion != null)
+                                    {
+                                        vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                        template = Film.Methods.Random();
+                                        keyboard = null;
+                                        SendMessage("Результаты поиска");
+                                        template = null;
+                                    }
+                                    else
+                                    {
+
+                                        vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                        
+                                        Film.Methods.Random_inMessage();
+                                        attachments = null;
+                                        keyboard = null;
+                                    }
                                     user.RemoveLevel();
                                     break;
 
@@ -925,7 +943,7 @@ namespace Freetime_Planner
                                     if (user.TVRecommendations.TryGetValue(int.Parse(p.filmId), out TV.TVObject tv))
                                     {
                                         attachments = new List<MediaAttachment> { Attachments.PosterObject(tv.data.posterUrl, tv.data.filmId.ToString()) };
-                                        keyboard = Keyboards.TVSearch(tv.data.nameRu, tv.data.nameEn, tv.data.filmId.ToString(), string.Join("*", tv.data.genres.Select(g => g.genre)));
+                                        keyboard = Keyboards.TVSearch(tv.data.nameRu, tv.data.nameEn, tv.data.filmId.ToString(), string.Join("*", tv.data.genres.Select(g => g.genre)), tv.data.premiereRu);
                                         SendMessage(TV.Methods.FullInfo(tv));
                                     }
                                     else
@@ -956,6 +974,24 @@ namespace Freetime_Planner
                                 case No:
                                     SendMessage("Жаль... Буду стараться предлагать более интересные сериалы");
                                     user.RemoveLevel();
+                                    break;
+
+                                //"Где посмотреть"
+                                case WhereToWatch:
+                                    if (ServiceClass.service_data.google_requests < 100)
+                                    {
+                                        SendMessage("Ищу места для просмотра сериала...");
+                                        keyboard = TV.Methods.ServiceLinks(p.nameRu, p.date);
+                                        if (keyboard == null)
+                                            SendMessage("К сожалению, я не смог найти места для просмотра... 😔");
+                                        else
+                                        {
+                                            SendMessage("Жми одну из кнопок кнопку и смотри!");
+                                            keyboard = null;
+                                        }
+                                    }
+                                    else
+                                        SendMessage("К сожалению, я не смог найти места для просмотра... 😔");
                                     break;
 
                                 default:
@@ -1005,12 +1041,21 @@ namespace Freetime_Planner
 
                                 //"Рандомный сериал"
                                 case Modes.Mode.Random:
-                                    SendMessage("Ищу случайные сериалы...");
+                                   SendMessage("Ищу случайные сериалы...");
                                     vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    template = TV.Methods.Random();
-                                    keyboard = null;
-                                    SendMessage("Результаты поиска");
-                                    template = null;
+                                    if (IsMobileVersion != null)
+                                    {
+                                        template = TV.Methods.Random();
+                                        keyboard = null;
+                                        SendMessage("Результаты поиска");
+                                        template = null;
+                                    }
+                                    else
+                                    {
+                                        TV.Methods.Random_inMessage();
+                                        keyboard = null;
+                                        attachments = null;
+                                    }
                                     user.RemoveLevel();
                                     break;
 
@@ -1196,14 +1241,27 @@ namespace Freetime_Planner
                             case Search:
                                 keyboard = null;
                                 SendMessage("Ищу фильмы по введенному названию...");
+
                                 vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                template = Film.Methods.Search(message.Text);
-                                if (template == null)
-                                    SendMessage("К сожалению, я не смог найти такой фильм... 😔");
+                                if (IsMobileVersion != null)
+                                {
+                                    template = Film.Methods.Search(message.Text);
+
+
+                                    if (template == null)
+                                        SendMessage("К сожалению, я не смог найти такой фильм... 😔");
+                                    else
+                                    {
+                                        SendMessage("Результаты поиска");
+                                        template = null;
+                                    }
+                                }
+                                //not mobile
                                 else
                                 {
-                                    SendMessage("Результаты поиска");
-                                    template = null;
+                                    Film.Methods.Search_inMessage(message.Text);
+                                    keyboard = null;
+                                    attachments = null;
                                 }
                                 break;
 
@@ -1266,13 +1324,22 @@ namespace Freetime_Planner
                                 keyboard = null;
                                 SendMessage("Ищу сериалы по введенному названию...");
                                 vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                template = TV.Methods.Search(message.Text);
-                                if (template == null)
-                                    SendMessage("К сожалению, я не смог найти такой сериал... 😔");
+                                if (IsMobileVersion != null)
+                                {
+                                    template = TV.Methods.Search(message.Text);
+                                    if (template == null)
+                                        SendMessage("К сожалению, я не смог найти такой сериал... 😔");
+                                    else
+                                    {
+                                        SendMessage("Результаты поиска");
+                                        template = null;
+                                    }
+                                }//not mobile
                                 else
                                 {
-                                    SendMessage("Результаты поиска");
-                                    template = null;
+                                    TV.Methods.Search_inMessage(message.Text);
+                                    keyboard = null;
+                                    attachments = null;
                                 }
                                 break;
 
@@ -1331,7 +1398,7 @@ namespace Freetime_Planner
         public static object PFTsynclock = new object();
 
         public static Timer OneHourTimer;
-        public static int PlFTinterval = 3600000; //1 час - интервал проверки 
+        public static int PlFTinterval = 30000; //1 час - интервал проверки 
         public static int day_time = 0; //0 - час в сутках, в который обновляются планируемые фильмы (т.е. в диапозоне 0:00-0:59)
         public static object PlFTsynclock = new object();
 
@@ -1369,7 +1436,7 @@ namespace Freetime_Planner
         {
             lock (PFTsynclock)
             {
-                /*if (DateTime.Now.CompareTo(Film.LastPopularFilmsUpdate.AddDays(update_time)) != -1)
+                if (DateTime.Now.CompareTo(Film.LastPopularFilmsUpdate.AddDays(update_time)) != -1)
                 {
                     Film.UpdatePopularFilms();
                     Film.LastPopularFilmsUpdate = DateTime.Now;
@@ -1380,7 +1447,7 @@ namespace Freetime_Planner
                     TV.UpdatePopularTV();
                     TV.LastPopularTVUpdate = DateTime.Now;
                     TV.UnloadPopularTV();
-                }*/
+                }
             }
         }
 
@@ -1392,11 +1459,34 @@ namespace Freetime_Planner
         {
             lock (PlFTsynclock)
             {
-                //Обновление списка планируемых фильмов, если сейчас 0:00-0:59
-                if (DateTime.Now.Hour == 0)
+                //Обновление списка планируемых фильмов и проверка наличия новых трейлеров, если после последнего обновления прошло более суток
+                foreach (var user in Users.Users_Dict.Values)
+                {
+                    if (user.LastPlannedFilmsUpdate.AddDays(1).CompareTo(DateTime.Now) <= 0)
+                    {
+                        user.UpdatePlannedFilms();
+                        foreach (var film in user.PlannedFilms[1])
+                            film.UpdateTrailer();
+                    }
+                }
+                Users.Unload();
+
+                //Рассылка вышедших трейлеров, если сейчас 11:00-11:59
+                if (DateTime.Now.Hour == 11)
                 {
                     foreach (var user in Users.Users_Dict.Values)
-                        user.UpdatePlannedFilms();
+                    {
+                        foreach(var film in user.PlannedFilms[1].Where(f => f.Trailer.IsNew))
+                        {
+                            attachments = new List<MediaAttachment> { film.Trailer.Trailer };
+                            var previous_user = Bot.user;
+                            Bot.user = user;
+                            SendMessage($"🔥 Новый трейлер! 🔥\n\n{film.data.nameRu ?? film.data.nameEn} ({film.data.premiereRu.Substring(0, 4)})");
+                            Bot.user = previous_user;
+                            film.Trailer.IsNew = false;
+                        }
+                    }
+                    attachments = null;
                     Users.Unload();
                 }
 
@@ -1450,12 +1540,16 @@ namespace Freetime_Planner
                     var r = new Random();
                     foreach (var p in Users.Users_Dict.Values.Where(u => u.MailFunction))
                     {
-                        if (DateTime.Now.CompareTo(p.NextMail) >= 0 && p.MailObjects.Count != 0)
+                        while(DateTime.Now.CompareTo(p.NextMail) >= 0 && p.MailObjects.Count != 0)
                         {
                             var mail = p.MailObjects.Dequeue();
                             string message = $"{mail.Name} ({mail.Year})";
                             if (mail.IsTrailer)
+                            {
+                                if (!p.PlannedFilms[0].Select(f => f.data.filmId.ToString()).Contains(mail.id))
+                                    continue;
                                 attachments = new List<MediaAttachment> { mail.Trailer };
+                            }
                             else
                             {
                                 attachments = new List<MediaAttachment>();

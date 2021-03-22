@@ -13,7 +13,7 @@ namespace Freetime_Planner
         /// <summary>
         /// Путь к json-файлу со списком пользователей
         /// </summary>
-        private static string users_path = @"Users_Dict\Users_Dict.json";
+        public static string users_path;
 
         /// <summary>
         /// Словарь пользователей, где ключ - это ID, а значение - объект класса User

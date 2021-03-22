@@ -19,13 +19,12 @@ namespace Freetime_Planner
         public string _youtube_key { get; set; }
         public string _google_key { get; set; }
         public string _google_sid { get; set; } 
-
-
-        public static string path = "Access_Tokens.json";
+        public string _google_sid_series { get; set; }
 
         public static void Upload()
         {
-            var token_object = JsonConvert.DeserializeObject<AccessTokens>(File.ReadAllText(path));
+            var directory = GetCurrentDirectory();
+            var token_object = JsonConvert.DeserializeObject<AccessTokens>(File.ReadAllText(directory + "/Access_Tokens.json"));
             Bot._access_token = token_object._access_token;
             Bot._private_access_token = token_object._private_access_token;
             Bot._mdb_key = token_object._mdb_key;
@@ -37,17 +36,29 @@ namespace Freetime_Planner
             Bot._youtube_key = token_object._youtube_key;
             Bot._google_key = token_object._google_key;
             Bot._google_sid = token_object._google_sid;
+            Bot._google_sid_series = token_object._google_sid_series;
+            Users.users_path = directory + "/Users_Dict.json";
+            Film.PopularFilmsPath = directory + "/PopularFilms.json";
+            TV.PopularTVPath = directory + "/PopularTV.json";
+            ServiceClass.service_path = directory + "/ServiceData.json";
+            Food.GenreFoodPath = directory + "/GenreFood.txt";
+        }
+
+        public static string GetCurrentDirectory()
+        {
+            string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            return Path.GetDirectoryName(exePath).Replace("\\", "/");
         }
     }
 
     public static class ServiceClass
     {
         public static ServiceData service_data;
-        public static string service_path = "ServiceData.json";
+        public static string service_path;
 
         public static void UploadServiceData()
         {
-            if (!File.Exists("ServiceData.json"))
+            if (!File.Exists(service_path))
             {
                 service_data = new ServiceData();
                 File.WriteAllText(service_path, JsonConvert.SerializeObject(service_data));

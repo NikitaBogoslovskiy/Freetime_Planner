@@ -22,7 +22,7 @@ namespace Freetime_Planner
         public static string[] Desserts = new string[] {"шоколадный десерт", "фруктовый десерт", "молочный десерт", "мармеладный десерт", 
             "десерт с мороженым", "десерт с яблоком", "ванильный десерт", "десерт пудинг рецепт", "десерт нутелла рецепт", "шоколадный брауни рецепт"};
         public static Dictionary<string, string[]> GenreFood = new Dictionary<string, string[]>();
-        public static string GenreFoodPath = "GenreFood.txt";
+        public static string GenreFoodPath;
         public static Random r = new Random();
         public static WebClient wc = new WebClient();
         public static Video Snack()
