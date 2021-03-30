@@ -325,6 +325,7 @@ namespace Freetime_Planner
             catch (Exception e)
             {
                 WriteLine("Ошибка! " + e.Message);
+                WriteLine("Путь к ошибке: " + e.StackTrace);
             }
         }
 
