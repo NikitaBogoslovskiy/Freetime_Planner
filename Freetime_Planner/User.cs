@@ -249,6 +249,19 @@ namespace Freetime_Planner
             LastPlannedFilmsUpdate = DateTime.Now;
         }
 
+        public void RemovePlannedFilm(string filmID)
+        {
+            var ind = PlannedFilms[0].FindIndex(film => film.data.filmId == int.Parse(filmID));
+            if (ind!= -1)
+            {
+                PlannedFilms[0].RemoveAt(ind);
+                return;
+            }
+            ind = PlannedFilms[1].FindIndex(film => film.data.filmId == int.Parse(filmID));
+            if (ind != -1)
+                PlannedFilms[1].RemoveAt(ind);
+        }
+
         /// <summary>
         /// Обновляет список рекомендации на основании понравившегося фильма
         /// </summary>
@@ -437,6 +450,13 @@ namespace Freetime_Planner
             UpdateTVRecommendationsAsync(nameEn);
             Users.Unload();
             return true;
+        }
+
+        public void RemovePlannedTV(string filmID)
+        {
+            var ind = PlannedTV.FindIndex(film => film.data.filmId == int.Parse(filmID));
+            if (ind != -1)
+                PlannedTV.RemoveAt(ind);
         }
 
         public void LikeTV(string nameEn)

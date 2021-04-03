@@ -42,6 +42,7 @@ namespace Freetime_Planner
             TV.PopularTVPath = directory + "/PopularTV.json";
             ServiceClass.service_path = directory + "/ServiceData.json";
             Food.GenreFoodPath = directory + "/GenreFood.txt";
+            Attachments.DefaultPosterPath = directory + "/DefaultPoster.jpg";
         }
 
         public static string GetCurrentDirectory()

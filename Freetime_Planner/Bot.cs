@@ -674,6 +674,7 @@ namespace Freetime_Planner
                                 //"Посмотрел"
                                 case Watched:
                                     user.HideFilm(int.Parse(p.filmId));
+                                    user.RemovePlannedFilm(p.filmId);
                                     keyboard = Keyboards.FilmWatched(p.nameEn, p.filmId);
                                     SendMessage("Понравился фильм?");
                                     keyboard = null;
@@ -722,6 +723,7 @@ namespace Freetime_Planner
                                 //"Не показывать"
                                 case BlackList:
                                     user.HideFilm(int.Parse(p.filmId));
+                                    user.RemovePlannedFilm(p.filmId);
                                     SendMessage("Добавлено в список нежелаемых фильмов");
                                     user.RemoveLevel();
                                     break;
@@ -889,6 +891,7 @@ namespace Freetime_Planner
                                 //"Посмотрел"
                                 case Watched:
                                     user.HideTV(int.Parse(p.filmId));
+                                    user.RemovePlannedTV(p.filmId);
                                     keyboard = Keyboards.TVWatched(p.nameEn, p.filmId);
                                     SendMessage("Понравился сериал?");
                                     keyboard = null;
@@ -933,6 +936,7 @@ namespace Freetime_Planner
                                 //"Не показывать"
                                 case BlackList:
                                     user.HideTV(int.Parse(p.filmId));
+                                    user.RemovePlannedTV(p.filmId);
                                     SendMessage("Добавлено в список нежелаемых сериалов");
                                     user.RemoveLevel();
                                     break;
