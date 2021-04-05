@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Net;
 using System.Security.Claims;
+using static System.Console;
 
 namespace Freetime_Planner
 {
@@ -500,24 +501,29 @@ namespace Freetime_Planner
 
                  Keyboards.RandomFilmResultsMessage(results);
             }
-                /// <summary>
-                /// Возвращает список аудиозаписей по названию фильма
-                /// </summary>
-                /// <param name="filmName"></param>
-                /// <returns></returns>
-                public static bool Soundtrack(string filmName, string date, List<Audio> audios, int count = 6)
+            /// <summary>
+            /// Возвращает список аудиозаписей по названию фильма
+            /// </summary>
+            /// <param name="filmName"></param>
+            /// <returns></returns>
+            public static bool Soundtrack(string filmName, string date, List<Audio> audios, int count = 6)
             {
-                Yandex.Music.Api.Models.YandexAlbum album = null;
+                /*Yandex.Music.Api.Models.YandexAlbum album = null;
                 try
                 {
-                    album = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{filmName} {date.Substring(0, 4)} ").First(album => album.TrackCount >= 4).Id);
+                    var albums = yandex_api.SearchAlbums($"{filmName} {date.Substring(0, 4)}");
+                    WriteLine(JsonConvert.SerializeObject(albums));
+                    album = yandex_api.GetAlbum(albums.First(album => album.TrackCount >= 4).Id);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    WriteLine(e.Message);
+                    WriteLine(e.StackTrace);
                     return false;
                 }
                 var tracks = album.Volumes[0].Take(Math.Min(count, album.TrackCount.Value));
-                var song_names = tracks.Select(track => track.Title + " " + string.Join(" ", track.Artists.Select(artist => artist.Name))).ToArray();
+                var song_names = tracks.Select(track => track.Title + " " + string.Join(" ", track.Artists.Select(artist => artist.Name))).ToArray();*/
+                var song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{filmName} {date.Substring(0, 4)}")).ToArray();
                 Parallel.For(0, song_names.Length, (i, state) =>
                 {
                     var collection = private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
@@ -1002,6 +1008,124 @@ namespace Freetime_Planner
     }
 
     #endregion
+
+    #region Spotify
+
+    public class SpotifyTracks
+    {
+        public class Artist
+        {
+            public string name { get; set; }
+        }
+
+        public class Track
+        {
+            public List<Artist> artists { get; set; }
+            public string name { get; set; }
+        }
+
+        public class Item
+        {
+            public Track track { get; set; }
+        }
+
+        public class Tracks
+        {
+            public List<Item> items { get; set; }
+        }
+
+        public static IEnumerable<string> GetTracks(string id)
+        {
+            var client = new RestSharp.RestClient($"https://api.spotify.com/v1/playlists/{id}/tracks");
+            var request = new RestRequest(Method.GET);
+            request.AddHeader("Authorization", $"Bearer {_spotify_token}");
+            request.AddQueryParameter("market", "RU");
+            request.AddQueryParameter("fields", "items(track(name,artists(name)))");
+            request.AddQueryParameter("limit", "6");
+            return JsonConvert.DeserializeObject<Tracks>(client.Execute(request).Content).items.Select(i => $"{i.track.name} {string.Join(" ", i.track.artists)}");
+        }
+    }
+
+    public class SpotifyPlaylists
+    {
+        public class ExternalUrls
+        {
+            public string spotify { get; set; }
+        }
+
+        public class Image
+        {
+            public object height { get; set; }
+            public string url { get; set; }
+            public object width { get; set; }
+        }
+
+        public class Owner
+        {
+            public string display_name { get; set; }
+            public ExternalUrls external_urls { get; set; }
+            public string href { get; set; }
+            public string id { get; set; }
+            public string type { get; set; }
+            public string uri { get; set; }
+        }
+
+        public class Tracks
+        {
+            public string href { get; set; }
+            public int total { get; set; }
+        }
+
+        public class Item
+        {
+            public bool collaborative { get; set; }
+            public string description { get; set; }
+            public ExternalUrls external_urls { get; set; }
+            public string href { get; set; }
+            public string id { get; set; }
+            public List<Image> images { get; set; }
+            public string name { get; set; }
+            public Owner owner { get; set; }
+            public object primary_color { get; set; }
+            public object @public { get; set; }
+            public string snapshot_id { get; set; }
+            public Tracks tracks { get; set; }
+            public string type { get; set; }
+            public string uri { get; set; }
+        }
+
+        public class Playlists
+        {
+            public string href { get; set; }
+            public List<Item> items { get; set; }
+            public int limit { get; set; }
+            public string next { get; set; }
+            public int offset { get; set; }
+            public object previous { get; set; }
+            public int total { get; set; }
+        }
+
+        public class Root
+        {
+            public Playlists playlists { get; set; }
+        }
+
+
+        public static string SearchPlaylist(string query)
+        {
+            var client = new RestSharp.RestClient($"https://api.spotify.com/v1/search");
+            var request = new RestRequest(Method.GET);
+            request.AddHeader("Authorization", $"Bearer {Bot._spotify_token}");
+            request.AddQueryParameter("q", query);
+            request.AddQueryParameter("type", "playlist");
+            request.AddQueryParameter("limit", "1");
+            return JsonConvert.DeserializeObject<SpotifyPlaylists.Root>(client.Execute(request).Content).playlists.items[0].id;
+        }
+    }
+
+    #endregion
+
+
     /*
     #region MDBSearch
     public class MDBFilmObject

@@ -20,13 +20,23 @@ namespace Freetime_Planner
         /// </summary>
         public static Dictionary<long, User> Users_Dict;
 
+        public static bool FileIsUsed = false;
+
         /// <summary>
         /// Загружает json-файл со списком известных на данный момент пользователей по пути, указанному в поле users_path
         /// </summary>
         public static void Upload()
         {
-            var dict = JsonConvert.DeserializeObject<Dictionary<long, User>>(File.ReadAllText(users_path));
-            Users_Dict = dict ?? new Dictionary<long, User>();
+            while (true)
+            {
+                if (FileIsUsed)
+                    continue;
+                FileIsUsed = true;
+                var dict = JsonConvert.DeserializeObject<Dictionary<long, User>>(File.ReadAllText(users_path));
+                FileIsUsed = false;
+                Users_Dict = dict ?? new Dictionary<long, User>();
+                break;
+            }
             foreach (var user in Users_Dict.Values)
                 user.Level.RemoveFirst(); //костыль: при десериализации возникает лишний первый уровень Default   
         }
@@ -36,13 +46,14 @@ namespace Freetime_Planner
         /// </summary>
         public static void Unload()
         {
-            try
+            while (true)
             {
+                if (FileIsUsed)
+                    continue;
+                FileIsUsed = true;
                 File.WriteAllText(users_path, JsonConvert.SerializeObject(Users_Dict));
-            }
-            catch(System.IO.IOException)
-            {
-                File.WriteAllText(users_path, JsonConvert.SerializeObject(Users_Dict));
+                FileIsUsed = false;
+                return;
             }
         }
 

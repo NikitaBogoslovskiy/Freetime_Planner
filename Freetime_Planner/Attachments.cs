@@ -28,7 +28,7 @@ namespace Freetime_Planner
         {
             try 
             { 
-                string path = String.Format("film_{0}_{1}.jpg", film.data.filmId, Guid.NewGuid());
+                string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", film.data.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.data.posterUrl, path);
                 if (!CropAndOverwrite(path))
@@ -56,7 +56,7 @@ namespace Freetime_Planner
         {
             try
             { 
-                string path = String.Format("film_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
+                string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.posterUrl, path);
                 if (!CropAndOverwrite(path))
@@ -84,7 +84,7 @@ namespace Freetime_Planner
         {
             try
             { 
-                string path = String.Format("film_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
+                string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.posterUrl, path);
                 if (!CropAndOverwrite(path))
@@ -112,7 +112,7 @@ namespace Freetime_Planner
         {
             try
             { 
-                string path = String.Format("film_{0}_{1}.jpg", film.data.filmId, Guid.NewGuid());
+                string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", film.data.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.data.posterUrl, path);
                 if (!CropAndOverwrite(path))
@@ -144,7 +144,7 @@ namespace Freetime_Planner
         {
             try
             { 
-                string path = String.Format("tv_{0}_{1}.jpg", tv.data.filmId, Guid.NewGuid());
+                string path = String.Format(Bot.directory + "/tv_{0}_{1}.jpg", tv.data.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(tv.data.posterUrl, path);
                 if (!CropAndOverwrite(path))
@@ -172,7 +172,7 @@ namespace Freetime_Planner
         {
             try
             { 
-                string path = String.Format("tv_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
+                string path = String.Format(Bot.directory + "/tv_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.posterUrl, path);
                 if (!CropAndOverwrite(path))
@@ -200,7 +200,7 @@ namespace Freetime_Planner
         {
             try
             { 
-                string path = String.Format("tv_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
+                string path = String.Format(Bot.directory + "/tv_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.posterUrl, path);
                 if (!CropAndOverwrite(path))
@@ -228,7 +228,7 @@ namespace Freetime_Planner
         {
             try
             { 
-                string path = String.Format("tv_{0}_{1}.jpg", tv.data.filmId, Guid.NewGuid());
+                string path = String.Format(Bot.directory + "/tv_{0}_{1}.jpg", tv.data.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(tv.data.posterUrl, path);
                 if (!CropAndOverwrite(path))
@@ -257,7 +257,7 @@ namespace Freetime_Planner
 
         public static Photo PosterObject(string url, string filmID)
         {
-            string path = String.Format("film_{0}_{1}.jpg", filmID, Guid.NewGuid());
+            string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", filmID, Guid.NewGuid());
             WebClient wc = new WebClient();
             try
             {
@@ -280,7 +280,7 @@ namespace Freetime_Planner
 
         public static bool PosterObject(string url, string filmID, out Photo photo)
         {
-            string path = String.Format("film_{0}_{1}.jpg", filmID, Guid.NewGuid());
+            string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", filmID, Guid.NewGuid());
             WebClient wc = new WebClient();
             photo = null;
             try

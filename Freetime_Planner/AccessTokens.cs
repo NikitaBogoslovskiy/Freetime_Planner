@@ -20,11 +20,13 @@ namespace Freetime_Planner
         public string _google_key { get; set; }
         public string _google_sid { get; set; } 
         public string _google_sid_series { get; set; }
+        public string _spotify_client_id { get; set; }
+        public string _spotify_client_secret { get; set; }
 
         public static void Upload()
         {
-            var directory = GetCurrentDirectory();
-            var token_object = JsonConvert.DeserializeObject<AccessTokens>(File.ReadAllText(directory + "/Access_Tokens.json"));
+            Bot.directory = GetCurrentDirectory();
+            var token_object = JsonConvert.DeserializeObject<AccessTokens>(File.ReadAllText(Bot.directory + "/Access_Tokens.json"));
             Bot._access_token = token_object._access_token;
             Bot._private_access_token = token_object._private_access_token;
             Bot._mdb_key = token_object._mdb_key;
@@ -37,12 +39,19 @@ namespace Freetime_Planner
             Bot._google_key = token_object._google_key;
             Bot._google_sid = token_object._google_sid;
             Bot._google_sid_series = token_object._google_sid_series;
-            Users.users_path = directory + "/Users_Dict.json";
-            Film.PopularFilmsPath = directory + "/PopularFilms.json";
-            TV.PopularTVPath = directory + "/PopularTV.json";
-            ServiceClass.service_path = directory + "/ServiceData.json";
-            Food.GenreFoodPath = directory + "/GenreFood.txt";
-            Attachments.DefaultPosterPath = directory + "/DefaultPoster.jpg";
+            Bot._spotify_client_id = token_object._spotify_client_id;
+            Bot._spotify_client_secret = token_object._spotify_client_secret;
+            Users.users_path = Bot.directory + "/Users_Dict.json";
+            Film.PopularFilmsPath = Bot.directory + "/PopularFilms.json";
+            TV.PopularTVPath = Bot.directory + "/PopularTV.json";
+            ServiceClass.service_path = Bot.directory + "/ServiceData.json";
+            Food.GenreFoodPath = Bot.directory + "/GenreFood.txt";
+            Attachments.DefaultPosterPath = Bot.directory + "/DefaultPoster.jpg";
+            Bot.MainHelp = File.ReadAllText(Bot.directory + "/MainHelp.txt");
+            Bot.FilmHelp = File.ReadAllText(Bot.directory + "/FilmHelp.txt");
+            Bot.TVHelp = File.ReadAllText(Bot.directory + "/TVHelp.txt");
+            Bot.FoodHelp = File.ReadAllText(Bot.directory + "/FoodHelp.txt");
+            Bot.OptionsHelp = File.ReadAllText(Bot.directory + "/OptionsHelp.txt");
         }
 
         public static string GetCurrentDirectory()
@@ -90,5 +99,12 @@ namespace Freetime_Planner
             google_requests++;
             ServiceClass.UnloadServiceData();
         }
+    }
+
+    public class SpotifyResponse
+    {
+        public string access_token { get; set; }
+        public string token_type { get; set; }
+        public int expires_in { get; set; }
     }
 }

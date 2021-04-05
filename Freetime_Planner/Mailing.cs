@@ -48,7 +48,7 @@ namespace Freetime_Planner
                         IEnumerable<string> links = frames.frames.Select(f => f.image).Shuffle().Take(Math.Min(5, frames.frames.Count));
                         foreach (var link in links)
                         {
-                            if (Attachments.PosterObject(link, "0", out Photo photo))
+                            if (Attachments.PosterObject(link, filmID, out Photo photo))
                                 posters.Add(photo);
                         }
                         if (posters.Count != 0)
