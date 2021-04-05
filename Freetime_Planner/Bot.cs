@@ -813,7 +813,7 @@ namespace Freetime_Planner
                                     if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
                                         vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                        template = Film.Methods.Random();
+                                        template = user.Random();
                                         keyboard = null;
                                         SendMessage("Результаты поиска");
                                         template = null;

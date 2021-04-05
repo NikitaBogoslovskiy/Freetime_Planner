@@ -43,6 +43,9 @@ namespace Freetime_Planner
         /// </summary>
         public Dictionary<int, Film.FilmObject> FilmRecommendations { get; set; }
 
+        public  int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
+        public Dictionary<int, RandomFilms.Film>[] FilmRandomDict { get; set; }
+        public  int RandomDict { get; set; }
         /// <summary>
         /// Массив, состоящий из двух списков, элементы которых - объекты класса FilmObject. В первом списке вышедшие фильмы, во втором - не вышедвшие
         /// </summary>
@@ -92,6 +95,7 @@ namespace Freetime_Planner
             NextMail = new DateTime(next.Year, next.Month, next.Day, r.Next(12, 21), 0, 0);
             MailObjects = new Queue<Mailing.MailObject>();
             LastPlannedFilmsUpdate = DateTime.Now;
+            RandomDict = 0;
         }
 
         /// <summary>
@@ -176,6 +180,39 @@ namespace Freetime_Planner
             Keyboards.FilmMyRecommendationsMessage(FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
 
         }
+        //Переключатель между 0 и 1 
+   int Switch(int b)
+        {
+            if (b==0)
+                return ++b;
+            else return --b;
+        }
+        /// <summary>
+        /// Возвращает карусель из фильмов, которые были получены в результате случайного поиска фильма (используется класс FilmResults)
+        /// </summary>
+        /// <returns></returns>
+        public  MessageTemplate Random()
+        {
+            /*Random random = new Random();
+            
+            string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+           
+
+            var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+            var request = new RestRequest(Method.GET);
+            request.AddHeader("X-API-KEY", Bot._kp_key);
+            request.AddQueryParameter("type", "FILM");
+            request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+            request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+           
+            IRestResponse response = client.Execute(request);
+
+            var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);*/
+            UpdateFilmRandomAsync();
+            return Keyboards.RandomFilmResults(FilmRandomDict[RandomDict].Shuffle().Take(3).Select(kv => kv.Value));
+        }
+        
+     
 
         /// <summary>
         /// Возвращает список планируемых фильмов в текстовом виде (с разделением на вышедшие фильмы и те, что выйдут)
@@ -422,9 +459,46 @@ namespace Freetime_Planner
             Users.Unload();
         }
 
-        //--------------Пользовательские методы для сериалов--------------
+        private async void UpdateFilmRandomAsync()
+        {
+            await Task.Run(() => UpdateFilmRandom());
+        }
 
-        public MessageTemplate GetTVRecommendations()
+        /// <summary>
+        /// На основании названия фильма добавляет в список рекомендаций похожие фильмы
+        /// </summary> 12
+        /// <param name="nameEn"></param>
+        private void UpdateFilmRandom()
+        {
+            RandomDict = Switch(RandomDict);
+            Random random = new Random();
+
+            string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+
+
+            var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+            var request = new RestRequest(Method.GET);
+            request.AddHeader("X-API-KEY", Bot._kp_key);
+            request.AddQueryParameter("type", "FILM");
+            request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+            request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+
+            IRestResponse response = client.Execute(request);
+
+            var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
+
+            foreach (var f in results.films)//Нет Красноого, это глюки ваши, вы ничего не видели
+            {
+                f.VKPhotoID = Attachments.RecommendedFilmPosterID(f);
+                FilmRandomDict[RandomDict].Add(f.filmId, f);
+            }
+            
+        }
+
+
+            //--------------Пользовательские методы для сериалов--------------
+
+            public MessageTemplate GetTVRecommendations()
         {
             return Keyboards.TVMyRecommendations(TVRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
