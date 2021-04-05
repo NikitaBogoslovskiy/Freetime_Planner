@@ -22,6 +22,9 @@ using static System.Console;
 
 namespace Freetime_Planner
 {
+
+
+
     public static class Film
     {
         public static int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
@@ -451,11 +454,14 @@ namespace Freetime_Planner
                 else
                     Keyboards.FilmResultsMessage(results);
             }
+
+            
+
             /// <summary>
             /// Возвращает карусель из фильмов, которые были получены в результате случайного поиска фильма (используется класс FilmResults)
             /// </summary>
             /// <returns></returns>
-            public static MessageTemplate Random()
+           /* public static MessageTemplate Random()
             {
                 Random random = new Random();
                 //int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
@@ -476,7 +482,7 @@ namespace Freetime_Planner
 
                 var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
                 return Keyboards.RandomFilmResults(results);
-            }
+            }*/
             //not mobile
             public static void Random_inMessage()
             {
@@ -566,7 +572,7 @@ namespace Freetime_Planner
                 wc.DownloadString(video.UploadUrl);
                 return video;
             }
-
+            
             /// <summary>
             /// Возвращает клавиатуру с ссылками на сервисы для просмотра фильма
             /// </summary>
@@ -692,6 +698,7 @@ namespace Freetime_Planner
             public string posterUrl { get; set; }
             public string posterUrlPreview { get; set; }
             public string nameEn { get; set; }
+            public string VKPhotoID { get; set; }
         }
 
         public class Results
