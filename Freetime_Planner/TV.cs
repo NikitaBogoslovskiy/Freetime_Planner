@@ -364,7 +364,7 @@ namespace Freetime_Planner
             }
             public static bool Soundtrack(string TVName, List<Audio> audios, int count = 6)
             {
-                Yandex.Music.Api.Models.YandexAlbum album = null;
+                /*Yandex.Music.Api.Models.YandexAlbum album = null;
                 try
                 {
                     album = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{TVName} сериал").First(album => album.TrackCount >= 4).Id);
@@ -374,7 +374,9 @@ namespace Freetime_Planner
                     return false;
                 }
                 var tracks = album.Volumes[0].Take(Math.Min(count, album.TrackCount.Value));
-                var song_names = tracks.Select(track => track.Title + " " + string.Join(" ", track.Artists.Select(artist => artist.Name))).ToArray();
+                var song_names = tracks.Select(track => track.Title + " " + string.Join(" ", track.Artists.Select(artist => artist.Name))).ToArray();*/
+
+                var song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{TVName}")).ToArray();
                 Parallel.For(0, song_names.Length, (i, state) =>
                 {
                     var collection = private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams

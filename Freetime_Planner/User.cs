@@ -355,10 +355,7 @@ namespace Freetime_Planner
             IRestResponse response1 = client1.Execute(request1);
             var deserialized1 = JsonConvert.DeserializeObject<MDBResults>(response1.Content);
             if (deserialized1 == null || deserialized1.total_pages == 0)
-            {
-                Console.WriteLine("Ничего не нашел");
                 return;
-            }
             string sid = deserialized1.results.First().id.ToString();
 
             //поиск в англоязычной базе данных рекомендуемых фильмов к данному, используя ID данного фильма
@@ -368,12 +365,8 @@ namespace Freetime_Planner
             IRestResponse response2 = client2.Execute(request2);
             var deserialized2 = JsonConvert.DeserializeObject<MDBResults>(response2.Content);
             if (deserialized2 == null || deserialized2.total_pages == 0)
-            {
-                Console.WriteLine("Ничего не нашел 2"); 
                 return;
-            }
             string[] names = deserialized2.results.Select(film => film.title).ToArray();
-            Console.WriteLine(string.Join(", ", names));
 
             foreach (var name in names)
             {
@@ -410,10 +403,7 @@ namespace Freetime_Planner
                         IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
                         var film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content);
                         if (film == null)
-                        {
-                            Console.WriteLine("Ничего не нашел 3");
                             continue;
-                        }
                         film.Priority = 2;
                         
                         film.data.VKPhotoID   = Attachments.RecommendedFilmPosterID(film);

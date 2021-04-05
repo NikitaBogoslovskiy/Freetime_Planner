@@ -474,7 +474,7 @@ namespace Freetime_Planner
                     message = messages[i];
 
                     VkNet.Model.User Sender = vkapi.Users.Get(new long[] { messages[i].PeerId.Value },ProfileFields.Online)[0];
-                    IsMobileVersion = true;
+                    IsMobileVersion = Sender.Online;
                     user = Users.GetUser(Sender, out bool IsOld);
                     if (message.Attachments.Count != 0)
                     {
@@ -782,7 +782,7 @@ namespace Freetime_Planner
                                 case Recommendations:
                                     SendMessage("Составляю список рекомендаций...");
                                     //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    if (IsMobileVersion != null)
+                                    if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
                                         template = user.GetFilmRecommendations();
                                         keyboard = null;
@@ -791,9 +791,7 @@ namespace Freetime_Planner
                                     }
                                     else
                                     {
-                                      
                                         keyboard = null;
-                                        
                                         user.GetFilmRecommendationsMessage();
                                         attachments = null;
                                         keyboard = null;
@@ -812,7 +810,7 @@ namespace Freetime_Planner
                                 //"Рандомный фильм"
                                 case Modes.Mode.Random:
                                     SendMessage("Ищу случайные фильмы...");
-                                    if (IsMobileVersion != null)
+                                    if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
                                         vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
                                         template = Film.Methods.Random();
@@ -822,9 +820,7 @@ namespace Freetime_Planner
                                     }
                                     else
                                     {
-
                                         vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                        
                                         Film.Methods.Random_inMessage();
                                         attachments = null;
                                         keyboard = null;
@@ -997,7 +993,7 @@ namespace Freetime_Planner
                                 case Recommendations:
                                     SendMessage("Составляю список рекомендаций...");
                                     //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    if (IsMobileVersion != null)
+                                    if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
                                         template = user.GetTVRecommendations();
                                         keyboard = null;
@@ -1027,7 +1023,7 @@ namespace Freetime_Planner
                                 case Modes.Mode.Random:
                                    SendMessage("Ищу случайные сериалы...");
                                     vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    if (IsMobileVersion != null)
+                                    if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
                                         template = TV.Methods.Random();
                                         keyboard = null;
@@ -1227,11 +1223,9 @@ namespace Freetime_Planner
                                 SendMessage("Ищу фильмы по введенному названию...");
 
                                 vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                if (IsMobileVersion != null)
+                                if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                 {
                                     template = Film.Methods.Search(message.Text);
-
-
                                     if (template == null)
                                         SendMessage("К сожалению, я не смог найти такой фильм... 😔");
                                     else
@@ -1308,7 +1302,7 @@ namespace Freetime_Planner
                                 keyboard = null;
                                 SendMessage("Ищу сериалы по введенному названию...");
                                 vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                if (IsMobileVersion != null)
+                                if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                 {
                                     template = TV.Methods.Search(message.Text);
                                     if (template == null)
@@ -1382,7 +1376,7 @@ namespace Freetime_Planner
         public static object PFTsynclock = new object();
 
         public static Timer OneHourTimer;
-        public static int PlFTinterval = 30000; //1 час - интервал проверки 
+        public static int PlFTinterval = 3600000; //1 час - интервал проверки 
         public static int day_time = 0; //0 - час в сутках, в который обновляются планируемые фильмы (т.е. в диапозоне 0:00-0:59)
         public static object PlFTsynclock = new object();
 

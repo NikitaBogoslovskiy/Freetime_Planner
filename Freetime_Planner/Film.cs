@@ -523,6 +523,8 @@ namespace Freetime_Planner
                 }
                 var tracks = album.Volumes[0].Take(Math.Min(count, album.TrackCount.Value));
                 var song_names = tracks.Select(track => track.Title + " " + string.Join(" ", track.Artists.Select(artist => artist.Name))).ToArray();*/
+
+
                 var song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{filmName} {date.Substring(0, 4)}")).ToArray();
                 Parallel.For(0, song_names.Length, (i, state) =>
                 {
@@ -1042,7 +1044,7 @@ namespace Freetime_Planner
             request.AddQueryParameter("market", "RU");
             request.AddQueryParameter("fields", "items(track(name,artists(name)))");
             request.AddQueryParameter("limit", "6");
-            return JsonConvert.DeserializeObject<Tracks>(client.Execute(request).Content).items.Select(i => $"{i.track.name} {string.Join(" ", i.track.artists)}");
+            return JsonConvert.DeserializeObject<Tracks>(client.Execute(request).Content).items.Select(i => $"{i.track.name} {string.Join(" ", i.track.artists.Select(n => n.name))}");
         }
     }
 
