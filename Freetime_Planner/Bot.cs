@@ -273,6 +273,12 @@ namespace Freetime_Planner
                 WritelnColor("Загрузка популярных сериалов...", ConsoleColor.White);
                 TV.UploadPopularTV();
                 WritelnColor("Список популярных сериалов загружен", ConsoleColor.Green);
+                WritelnColor("Загрузка случайных фильмов...", ConsoleColor.White);
+                Film.UploadRandomFilms();
+                WritelnColor("Список случайных фильмов загружен", ConsoleColor.Green);
+                WritelnColor("Загрузка случайных сериалов...", ConsoleColor.White);
+                TV.UploadRandomTV();
+                WritelnColor("Список случайных сериалов загружен", ConsoleColor.Green);
                 InitTimers();
                 WritelnColor("Таймеры запущены", ConsoleColor.Green);
 
@@ -474,7 +480,7 @@ namespace Freetime_Planner
                     message = messages[i];
 
                     VkNet.Model.User Sender = vkapi.Users.Get(new long[] { messages[i].PeerId.Value },ProfileFields.Online)[0];
-                    IsMobileVersion = true;
+                    IsMobileVersion = Sender.Online;
                     user = Users.GetUser(Sender, out bool IsOld);
                     if (message.Attachments.Count != 0)
                     {
@@ -782,7 +788,7 @@ namespace Freetime_Planner
                                 case Recommendations:
                                     SendMessage("Составляю список рекомендаций...");
                                     //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    if (IsMobileVersion != null)
+                                    if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
                                         template = user.GetFilmRecommendations();
                                         keyboard = null;
@@ -791,9 +797,7 @@ namespace Freetime_Planner
                                     }
                                     else
                                     {
-                                      
                                         keyboard = null;
-                                        
                                         user.GetFilmRecommendationsMessage();
                                         attachments = null;
                                         keyboard = null;
@@ -812,19 +816,17 @@ namespace Freetime_Planner
                                 //"Рандомный фильм"
                                 case Modes.Mode.Random:
                                     SendMessage("Ищу случайные фильмы...");
-                                    if (IsMobileVersion != null)
+                                    if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
-                                        vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                        template = Film.Methods.Random();
+                                        //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                        template = user.RandomFilms();
                                         keyboard = null;
                                         SendMessage("Результаты поиска");
                                         template = null;
                                     }
                                     else
                                     {
-
                                         vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                        
                                         Film.Methods.Random_inMessage();
                                         attachments = null;
                                         keyboard = null;
@@ -997,7 +999,7 @@ namespace Freetime_Planner
                                 case Recommendations:
                                     SendMessage("Составляю список рекомендаций...");
                                     //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    if (IsMobileVersion != null)
+                                    if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
                                         template = user.GetTVRecommendations();
                                         keyboard = null;
@@ -1026,10 +1028,10 @@ namespace Freetime_Planner
                                 //"Рандомный сериал"
                                 case Modes.Mode.Random:
                                    SendMessage("Ищу случайные сериалы...");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                    if (IsMobileVersion != null)
+                                    //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                    if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
-                                        template = TV.Methods.Random();
+                                        template = user.RandomTV();
                                         keyboard = null;
                                         SendMessage("Результаты поиска");
                                         template = null;
@@ -1227,11 +1229,9 @@ namespace Freetime_Planner
                                 SendMessage("Ищу фильмы по введенному названию...");
 
                                 vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                if (IsMobileVersion != null)
+                                if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                 {
                                     template = Film.Methods.Search(message.Text);
-
-
                                     if (template == null)
                                         SendMessage("К сожалению, я не смог найти такой фильм... 😔");
                                     else
@@ -1308,7 +1308,7 @@ namespace Freetime_Planner
                                 keyboard = null;
                                 SendMessage("Ищу сериалы по введенному названию...");
                                 vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                if (IsMobileVersion != null)
+                                if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                 {
                                     template = TV.Methods.Search(message.Text);
                                     if (template == null)
@@ -1382,7 +1382,7 @@ namespace Freetime_Planner
         public static object PFTsynclock = new object();
 
         public static Timer OneHourTimer;
-        public static int PlFTinterval = 30000; //1 час - интервал проверки 
+        public static int PlFTinterval = 3600000; //1 час - интервал проверки 
         public static int day_time = 0; //0 - час в сутках, в который обновляются планируемые фильмы (т.е. в диапозоне 0:00-0:59)
         public static object PlFTsynclock = new object();
 
@@ -1436,6 +1436,18 @@ namespace Freetime_Planner
                     TV.UpdatePopularTV();
                     TV.LastPopularTVUpdate = DateTime.Now;
                     TV.UnloadPopularTV();
+                }
+                if (DateTime.Now.CompareTo(Film.LastRandomFilmsUpdate.AddDays(1)) != -1)
+                {
+                    Film.UpdateRandomFilms();
+                    Film.LastRandomFilmsUpdate = DateTime.Now;
+                    Film.UnloadRandomFilms();
+                }
+                if (DateTime.Now.CompareTo(TV.LastRandomTVUpdate.AddDays(1)) != -1)
+                {
+                    TV.UpdateRandomTV();
+                    TV.LastRandomTVUpdate = DateTime.Now;
+                    TV.UnloadRandomTV();
                 }
             }
         }

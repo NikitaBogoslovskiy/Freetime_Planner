@@ -43,6 +43,12 @@ namespace Freetime_Planner
         /// </summary>
         public Dictionary<int, Film.FilmObject> FilmRecommendations { get; set; }
 
+        public  int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
+        public Dictionary<int, RandomFilms.Film> FilmRandomDict { get; set; }
+        public bool RandomFilmsIsUpdating { get; set; }
+        public Dictionary<int, RandomTV.Film> TVRandomDict { get; set; }
+        public bool RandomTVIsUpdating { get; set; }
+
         /// <summary>
         /// Массив, состоящий из двух списков, элементы которых - объекты класса FilmObject. В первом списке вышедшие фильмы, во втором - не вышедвшие
         /// </summary>
@@ -92,6 +98,10 @@ namespace Freetime_Planner
             NextMail = new DateTime(next.Year, next.Month, next.Day, r.Next(12, 21), 0, 0);
             MailObjects = new Queue<Mailing.MailObject>();
             LastPlannedFilmsUpdate = DateTime.Now;
+            FilmRandomDict = Film.RandomFilms;
+            RandomFilmsIsUpdating = false;
+            TVRandomDict = TV.RandomTV;
+            RandomTVIsUpdating = false;
         }
 
         /// <summary>
@@ -176,6 +186,47 @@ namespace Freetime_Planner
             Keyboards.FilmMyRecommendationsMessage(FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
 
         }
+        //Переключатель между 0 и 1 
+        int Switch(int b)
+        {
+            if (b==0)
+                return ++b;
+            else return --b;
+        }
+        /// <summary>
+        /// Возвращает карусель из фильмов, которые были получены в результате случайного поиска фильма (используется класс FilmResults)
+        /// </summary>
+        /// <returns></returns>
+        public MessageTemplate RandomFilms()
+        {
+            /*Random random = new Random();
+            
+            string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+           
+
+            var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+            var request = new RestRequest(Method.GET);
+            request.AddHeader("X-API-KEY", Bot._kp_key);
+            request.AddQueryParameter("type", "FILM");
+            request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+            request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+           
+            IRestResponse response = client.Execute(request);
+
+            var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);*/
+
+            if (!RandomFilmsIsUpdating)
+            {
+                RandomFilmsIsUpdating = true;
+                UpdateFilmRandomAsync();
+            }
+            if (FilmRandomDict == null || FilmRandomDict.Count == 0)
+                FilmRandomDict = Film.RandomFilms;
+            //Console.WriteLine(string.Join("\n", FilmRandomDict.Values.Select(f => f.nameRu)));
+            return Keyboards.RandomFilmResults(FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+        }
+        
+     
 
         /// <summary>
         /// Возвращает список планируемых фильмов в текстовом виде (с разделением на вышедшие фильмы и те, что выйдут)
@@ -355,10 +406,7 @@ namespace Freetime_Planner
             IRestResponse response1 = client1.Execute(request1);
             var deserialized1 = JsonConvert.DeserializeObject<MDBResults>(response1.Content);
             if (deserialized1 == null || deserialized1.total_pages == 0)
-            {
-                Console.WriteLine("Ничего не нашел");
                 return;
-            }
             string sid = deserialized1.results.First().id.ToString();
 
             //поиск в англоязычной базе данных рекомендуемых фильмов к данному, используя ID данного фильма
@@ -368,12 +416,8 @@ namespace Freetime_Planner
             IRestResponse response2 = client2.Execute(request2);
             var deserialized2 = JsonConvert.DeserializeObject<MDBResults>(response2.Content);
             if (deserialized2 == null || deserialized2.total_pages == 0)
-            {
-                Console.WriteLine("Ничего не нашел 2"); 
                 return;
-            }
             string[] names = deserialized2.results.Select(film => film.title).ToArray();
-            Console.WriteLine(string.Join(", ", names));
 
             foreach (var name in names)
             {
@@ -410,10 +454,7 @@ namespace Freetime_Planner
                         IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
                         var film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content);
                         if (film == null)
-                        {
-                            Console.WriteLine("Ничего не нашел 3");
                             continue;
-                        }
                         film.Priority = 2;
                         
                         film.data.VKPhotoID   = Attachments.RecommendedFilmPosterID(film);
@@ -432,7 +473,50 @@ namespace Freetime_Planner
             Users.Unload();
         }
 
-        //--------------Пользовательские методы для сериалов--------------
+        private async void UpdateFilmRandomAsync()
+        {
+            await Task.Run(() => UpdateFilmRandom());
+        }
+
+        /// <summary>
+        /// На основании названия фильма добавляет в список рекомендаций похожие фильмы
+        /// </summary>
+        /// <param name="nameEn"></param>
+        private void UpdateFilmRandom()
+        {
+            while (true)
+            {
+                var dict = new Dictionary<int, RandomFilms.Film>();
+                Random random = new Random();
+
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "FILM");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+                IRestResponse response = client.Execute(request);
+                var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
+                if (results == null && results.films.Count == 0)
+                    continue;
+                for (int i = 0; i < results.films.Count; ++i)
+                {
+                    var t = results.films[i];
+                    t.VKPhotoID = Attachments.RandomFilmPosterID(t);
+                    if (t.VKPhotoID == null)
+                        continue;
+                    dict[t.filmId] = t;
+                }
+                FilmRandomDict = dict;
+                RandomFilmsIsUpdating = false;
+                Users.Unload();
+                return;
+            }
+        }
+
+
+            //--------------Пользовательские методы для сериалов--------------
 
         public MessageTemplate GetTVRecommendations()
         {
@@ -443,6 +527,20 @@ namespace Freetime_Planner
         {
             Keyboards.TVMyRecommendationsMessage(TVRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
+
+        public MessageTemplate RandomTV()
+        { 
+            if (!RandomTVIsUpdating)
+            {
+                RandomTVIsUpdating = true;
+                UpdateTVRandomAsync();
+            }
+            if (TVRandomDict == null || TVRandomDict.Count == 0)
+                TVRandomDict = TV.RandomTV;
+            //Console.WriteLine(string.Join("\n", TVRandomDict.Values.Select(f => f.nameRu)));
+            return Keyboards.RandomTVResults(TVRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+        }
+
         public string GetPlannedTV()
         {
             string res = "Планируемые к просмотру сериалы:\n";
@@ -600,6 +698,49 @@ namespace Freetime_Planner
                 TVRecommendations.Add(kv.Key, kv.Value);
             });
             Users.Unload();
+        }
+
+        private async void UpdateTVRandomAsync()
+        {
+            await Task.Run(() => UpdateTVRandom());
+        }
+
+        /// <summary>
+        /// На основании названия фильма добавляет в список рекомендаций похожие фильмы
+        /// </summary>
+        /// <param name="nameEn"></param>
+        private void UpdateTVRandom()
+        {
+            while (true)
+            {
+                var dict = new Dictionary<int, RandomTV.Film>();
+                Random random = new Random();
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "TV_SHOW");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                IRestResponse response = client.Execute(request);
+                var results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content);
+                if (results == null && results.films.Count == 0)
+                    continue;
+                for (int i = 0; i < results.films.Count; ++i)
+                {
+                    var t = results.films[i];
+                    t.VKPhotoID = Attachments.RandomTVPosterID(t);
+                    if (t.VKPhotoID == null)
+                        continue;
+                    dict[t.filmId] = t;
+                }
+                TVRandomDict = dict;
+                RandomTVIsUpdating = false;
+                Users.Unload();
+                return;
+            }
         }
 
 

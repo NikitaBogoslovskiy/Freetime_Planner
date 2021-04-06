@@ -8,8 +8,15 @@ namespace Freetime_Planner
         public static bool Works = true;
         static void Main(string[] args)
         {
-            if (Bot.Authorize())
-                while (true) { } 
+            while (true)
+            {
+                try
+                {
+                    Bot.Authorize();
+                    while (true) { }
+                }
+                catch (Exception) { }
+            }
         }
     }
 }

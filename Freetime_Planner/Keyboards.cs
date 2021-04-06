@@ -172,7 +172,7 @@ namespace Freetime_Planner
             return element;
 
         }
-     //-----------------------------"Мои рекомендации для не мобильного приложения"---------------------------------------
+        //-----------------------------"Мои рекомендации для не мобильного приложения"---------------------------------------
         public static void FilmMyRecommendationsMessage(IEnumerable<Film.FilmObject> farray,bool b = true)
         {
             var arr = new List<(string, Photo, MessageKeyboard)>();
@@ -316,7 +316,7 @@ namespace Freetime_Planner
 
 
         //------------------"Рандомный фильм" для мобильного приложения -----------------------------------------------
-        /// <summary>
+        /*/// <summary>
         /// Возвращает результаты случайного поиска фильмов в виде карусели
         /// </summary>
         /// <param name="results"></param>
@@ -339,11 +339,8 @@ namespace Freetime_Planner
             Parallel.ForEach(films, (film) =>
             {
                 CarouselElement template_part = null;
-                if (CarouselRandomFilmResult(film, ref template_part))
-                    //if (arr.Count < 3)
+                if (CarouselRandomFilmResult(film, ref template_part)) мы проверял зачем то 
                     arr.Add(template_part);
-                //else
-                //state.Break();
             });
             if (arr.Count != 0)
                 carousel.Elements = arr;
@@ -352,10 +349,28 @@ namespace Freetime_Planner
                 carousel = FilmMyRecommendations(PopularFilms.Shuffle().Take(3).Select(kv => kv.Value));
                 Console.WriteLine("Костыль");
             }
-
+    
+            return carousel;
+        }*/
+        /// <summary>
+        /// Возвращает результаты случайного поиска фильмов в виде карусели
+        /// </summary>
+        /// <param name="results"></param>
+        /// <returns></returns>
+        public static MessageTemplate RandomFilmResults(IEnumerable<RandomFilms.Film> results)
+        {
+            var carousel = new MessageTemplate();
+            carousel.Type = Carousel;
+            var arr = new List<CarouselElement>();
+            foreach (RandomFilms.Film f in results)
+            {
+                arr.Add(CarouselFilm(f));
+            }
+            carousel.Elements = arr;
+            
             return carousel;
         }
-        /// <summary>
+        /*/// <summary>
         /// Возвращает один элемент карусели рандомных фильмов
         /// </summary>
         /// <param name="film"></param>
@@ -370,13 +385,27 @@ namespace Freetime_Planner
             element.Description = genres.Replace("*", ", ");
             element.Buttons = button.Build().Buttons.First();
             element.PhotoId = Attachments.RandomFilmPosterID(film);
-            if (element.PhotoId == null)
+            if (element.PhotoId == null)//но надо будет да да да при загрузке в файл не забыть
                 return false;
             else
             {
                 template_part = element;
                 return true;
             }
+        }*/
+
+        public static CarouselElement CarouselFilm(RandomFilms.Film film)
+        {
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            var genres = string.Join('*', film.genres.Select(g => g.genre));
+            button.AddButton("Подробнее", $"f;;;{film.filmId};;;", Positive, "text");
+            var element = new CarouselElement();
+            element.Title = film.nameRu;
+            element.Description = genres.Replace("*", ", ");
+            element.Buttons = button.Build().Buttons.First();
+            element.PhotoId = film.VKPhotoID;
+            return element;
+
         }
         //------------------"Рандомный фильм" для не мобильного приложения -----------------------------------------------
 
@@ -707,7 +736,7 @@ namespace Freetime_Planner
 
 
         //----Сериалы--------------"Рандомный сериал" для  мобильного приложения -----------------------------------------------
-        public static MessageTemplate RandomTVResults(RandomTV.Results results)
+        /*public static MessageTemplate RandomTVResults(RandomTV.Results results)
         {
             var carousel = new MessageTemplate();
             carousel.Type = Carousel;
@@ -757,6 +786,34 @@ namespace Freetime_Planner
                 template_part = element;
                 return true;
             }
+
+        }*/
+
+        public static MessageTemplate RandomTVResults(IEnumerable<RandomTV.Film> results)
+        {
+            var carousel = new MessageTemplate();
+            carousel.Type = Carousel;
+            var arr = new List<CarouselElement>();
+            foreach (RandomTV.Film f in results)
+            {
+                arr.Add(CarouselFilm(f));
+            }
+            carousel.Elements = arr;
+
+            return carousel;
+        }
+
+        public static CarouselElement CarouselFilm(RandomTV.Film film)
+        {
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            var genres = string.Join('*', film.genres.Select(g => g.genre));
+            button.AddButton("Подробнее", $"t;;;{film.filmId};;;", Positive, "text");
+            var element = new CarouselElement();
+            element.Title = film.nameRu.Replace("(сериал)", "");
+            element.Description = genres.Replace("*", ", ");
+            element.Buttons = button.Build().Buttons.First();
+            element.PhotoId = film.VKPhotoID;
+            return element;
 
         }
 

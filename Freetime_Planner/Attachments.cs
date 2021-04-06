@@ -135,6 +135,34 @@ namespace Freetime_Planner
                 return null;
             }
         }
+
+        /*public static string RecommendedFilmPosterID(RandomFilms.Film film)
+        {
+            try
+            {
+                string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
+                WebClient wc = new WebClient();
+                wc.DownloadFile(film.posterUrl, path);
+                if (!CropAndOverwrite(path))
+                    return null;
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended, Bot.group_id);
+                var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+                var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                {
+                    SaveFileResponse = responseFile,
+                    AlbumId = Bot.album_id_recommended,
+                    GroupId = Bot.group_id
+                }).First();
+                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                File.Delete(path);
+                return vkid;
+            }
+            catch (Exception e)
+            {
+                WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
+                return null;
+            }
+        }*/
         #endregion
 
         //Вложения для сериалов
@@ -287,7 +315,10 @@ namespace Freetime_Planner
             {
                 wc.DownloadFile(url, path);
                 if (!SizeIsWell(path))
+                {
+                    File.Delete(path);
                     return false;
+                }
                 var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(Bot.user.ID);
                 var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();

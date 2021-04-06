@@ -38,7 +38,11 @@ namespace Freetime_Planner
                 break;
             }
             foreach (var user in Users_Dict.Values)
-                user.Level.RemoveFirst(); //костыль: при десериализации возникает лишний первый уровень Default   
+            {
+                user.Level.RemoveFirst();
+                user.RandomFilmsIsUpdating = false;
+                user.RandomTVIsUpdating = false;
+            }//костыль: при десериализации возникает лишний первый уровень Default   
         }
 
         /// <summary>

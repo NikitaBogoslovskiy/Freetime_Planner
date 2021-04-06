@@ -22,6 +22,9 @@ using static System.Console;
 
 namespace Freetime_Planner
 {
+
+
+
     public static class Film
     {
         public static int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
@@ -141,6 +144,81 @@ namespace Freetime_Planner
             }
             PopularFilms = res;
         }
+        #endregion
+
+
+        #region RandomFilms
+
+        public static Dictionary<int, RandomFilms.Film> RandomFilms { get; set; }
+        public static string RandomFilmsPath;
+        public static DateTime LastRandomFilmsUpdate { get; set; }
+
+        /// <summary>
+        /// Загружает список популярных фильмов из json-файла в поле PopularFilms. Если такого json-файла нет, то создает и выгружает список
+        /// </summary>
+        public static void UploadRandomFilms()
+        {
+            if (!File.Exists(RandomFilmsPath))
+            {
+                UpdateRandomFilms();
+                LastRandomFilmsUpdate = DateTime.Now;
+                UnloadRandomFilms();
+            }
+            else
+            {
+                try
+                {
+                    var pair = JsonConvert.DeserializeObject<KeyValuePair<DateTime, Dictionary<int, RandomFilms.Film>>>(File.ReadAllText(RandomFilmsPath));
+                    LastRandomFilmsUpdate = pair.Key;
+                    RandomFilms = pair.Value;
+                }
+                catch (Exception)
+                {
+                    UpdateRandomFilms();
+                    LastRandomFilmsUpdate = DateTime.Now;
+                    UnloadRandomFilms();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Выгружает список популярных фильмов из PopularFilms в json-файл
+        /// </summary>
+        public static void UnloadRandomFilms() => File.WriteAllText(RandomFilmsPath, JsonConvert.SerializeObject(new KeyValuePair<DateTime, Dictionary<int, RandomFilms.Film>>(LastRandomFilmsUpdate, RandomFilms)));
+
+        /// <summary>
+        /// Обновляет список популярных фильмов
+        /// </summary>
+        public static void UpdateRandomFilms()
+        {
+            while (true)
+            {
+                Random random = new Random();
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "FILM");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+                IRestResponse response = client.Execute(request);
+                var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content).films;
+                if (results == null || results.Count == 0)
+                    continue;
+
+                var dict = new Dictionary<int, RandomFilms.Film>();
+                for (int i = 0; i < results.Count; ++i)
+                {
+                    results[i].VKPhotoID = Attachments.RandomFilmPosterID(results[i]);
+                    if (results[i].VKPhotoID == null)
+                        continue;
+                    dict[results[i].filmId] = results[i];
+                }
+                RandomFilms = dict;
+                return;
+            }
+        }
+
         #endregion
 
         //Класс, необходимый для десериализации ответа с Кинопоиска при поиске фильма по его ID
@@ -451,11 +529,14 @@ namespace Freetime_Planner
                 else
                     Keyboards.FilmResultsMessage(results);
             }
+
+            
+
             /// <summary>
             /// Возвращает карусель из фильмов, которые были получены в результате случайного поиска фильма (используется класс FilmResults)
             /// </summary>
             /// <returns></returns>
-            public static MessageTemplate Random()
+           /* public static MessageTemplate Random()
             {
                 Random random = new Random();
                 //int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
@@ -476,7 +557,7 @@ namespace Freetime_Planner
 
                 var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
                 return Keyboards.RandomFilmResults(results);
-            }
+            }*/
             //not mobile
             public static void Random_inMessage()
             {
@@ -523,7 +604,15 @@ namespace Freetime_Planner
                 }
                 var tracks = album.Volumes[0].Take(Math.Min(count, album.TrackCount.Value));
                 var song_names = tracks.Select(track => track.Title + " " + string.Join(" ", track.Artists.Select(artist => artist.Name))).ToArray();*/
-                var song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{filmName} {date.Substring(0, 4)}")).ToArray();
+                string[] song_names;
+                try
+                {
+                    song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{filmName} {date.Substring(0, 4)}")).ToArray();
+                }
+                catch(Exception)
+                {
+                    return false;
+                }
                 Parallel.For(0, song_names.Length, (i, state) =>
                 {
                     var collection = private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
@@ -566,7 +655,7 @@ namespace Freetime_Planner
                 wc.DownloadString(video.UploadUrl);
                 return video;
             }
-
+            
             /// <summary>
             /// Возвращает клавиатуру с ссылками на сервисы для просмотра фильма
             /// </summary>
@@ -692,6 +781,7 @@ namespace Freetime_Planner
             public string posterUrl { get; set; }
             public string posterUrlPreview { get; set; }
             public string nameEn { get; set; }
+            public string VKPhotoID { get; set; }
         }
 
         public class Results
@@ -1042,7 +1132,7 @@ namespace Freetime_Planner
             request.AddQueryParameter("market", "RU");
             request.AddQueryParameter("fields", "items(track(name,artists(name)))");
             request.AddQueryParameter("limit", "6");
-            return JsonConvert.DeserializeObject<Tracks>(client.Execute(request).Content).items.Select(i => $"{i.track.name} {string.Join(" ", i.track.artists)}");
+            return JsonConvert.DeserializeObject<Tracks>(client.Execute(request).Content).items.Select(i => $"{i.track.name} {string.Join(" ", i.track.artists.Select(n => n.name))}");
         }
     }
 
