@@ -136,7 +136,7 @@ namespace Freetime_Planner
             }
         }
 
-        public static string RecommendedFilmPosterID(RandomFilms.Film film)
+        /*public static string RecommendedFilmPosterID(RandomFilms.Film film)
         {
             try
             {
@@ -162,7 +162,7 @@ namespace Freetime_Planner
                 WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
                 return null;
             }
-        }
+        }*/
         #endregion
 
         //Вложения для сериалов
@@ -315,7 +315,10 @@ namespace Freetime_Planner
             {
                 wc.DownloadFile(url, path);
                 if (!SizeIsWell(path))
+                {
+                    File.Delete(path);
                     return false;
+                }
                 var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(Bot.user.ID);
                 var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();

@@ -44,8 +44,11 @@ namespace Freetime_Planner
         public Dictionary<int, Film.FilmObject> FilmRecommendations { get; set; }
 
         public  int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
-        public Dictionary<int, RandomFilms.Film>[] FilmRandomDict { get; set; }
-        public  int RandomDict { get; set; }
+        public Dictionary<int, RandomFilms.Film> FilmRandomDict { get; set; }
+        public bool RandomFilmsIsUpdating { get; set; }
+        public Dictionary<int, RandomTV.Film> TVRandomDict { get; set; }
+        public bool RandomTVIsUpdating { get; set; }
+
         /// <summary>
         /// Массив, состоящий из двух списков, элементы которых - объекты класса FilmObject. В первом списке вышедшие фильмы, во втором - не вышедвшие
         /// </summary>
@@ -95,7 +98,10 @@ namespace Freetime_Planner
             NextMail = new DateTime(next.Year, next.Month, next.Day, r.Next(12, 21), 0, 0);
             MailObjects = new Queue<Mailing.MailObject>();
             LastPlannedFilmsUpdate = DateTime.Now;
-            RandomDict = 0;
+            FilmRandomDict = Film.RandomFilms;
+            RandomFilmsIsUpdating = false;
+            TVRandomDict = TV.RandomTV;
+            RandomTVIsUpdating = false;
         }
 
         /// <summary>
@@ -181,7 +187,7 @@ namespace Freetime_Planner
 
         }
         //Переключатель между 0 и 1 
-   int Switch(int b)
+        int Switch(int b)
         {
             if (b==0)
                 return ++b;
@@ -191,7 +197,7 @@ namespace Freetime_Planner
         /// Возвращает карусель из фильмов, которые были получены в результате случайного поиска фильма (используется класс FilmResults)
         /// </summary>
         /// <returns></returns>
-        public  MessageTemplate Random()
+        public MessageTemplate RandomFilms()
         {
             /*Random random = new Random();
             
@@ -208,8 +214,16 @@ namespace Freetime_Planner
             IRestResponse response = client.Execute(request);
 
             var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);*/
-            UpdateFilmRandomAsync();
-            return Keyboards.RandomFilmResults(FilmRandomDict[RandomDict].Shuffle().Take(3).Select(kv => kv.Value));
+
+            if (!RandomFilmsIsUpdating)
+            {
+                RandomFilmsIsUpdating = true;
+                UpdateFilmRandomAsync();
+            }
+            if (FilmRandomDict == null || FilmRandomDict.Count == 0)
+                FilmRandomDict = Film.RandomFilms;
+            //Console.WriteLine(string.Join("\n", FilmRandomDict.Values.Select(f => f.nameRu)));
+            return Keyboards.RandomFilmResults(FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
         }
         
      
@@ -466,39 +480,45 @@ namespace Freetime_Planner
 
         /// <summary>
         /// На основании названия фильма добавляет в список рекомендаций похожие фильмы
-        /// </summary> 12
+        /// </summary>
         /// <param name="nameEn"></param>
         private void UpdateFilmRandom()
         {
-            RandomDict = Switch(RandomDict);
-            Random random = new Random();
-
-            string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
-
-
-            var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
-            var request = new RestRequest(Method.GET);
-            request.AddHeader("X-API-KEY", Bot._kp_key);
-            request.AddQueryParameter("type", "FILM");
-            request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
-            request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
-
-            IRestResponse response = client.Execute(request);
-
-            var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
-
-            foreach (var f in results.films)//Нет Красноого, это глюки ваши, вы ничего не видели
+            while (true)
             {
-                f.VKPhotoID = Attachments.RecommendedFilmPosterID(f);
-                FilmRandomDict[RandomDict].Add(f.filmId, f);
+                var dict = new Dictionary<int, RandomFilms.Film>();
+                Random random = new Random();
+
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "FILM");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+                IRestResponse response = client.Execute(request);
+                var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
+                if (results == null && results.films.Count == 0)
+                    continue;
+                for (int i = 0; i < results.films.Count; ++i)
+                {
+                    var t = results.films[i];
+                    t.VKPhotoID = Attachments.RandomFilmPosterID(t);
+                    if (t.VKPhotoID == null)
+                        continue;
+                    dict[t.filmId] = t;
+                }
+                FilmRandomDict = dict;
+                RandomFilmsIsUpdating = false;
+                Users.Unload();
+                return;
             }
-            
         }
 
 
             //--------------Пользовательские методы для сериалов--------------
 
-            public MessageTemplate GetTVRecommendations()
+        public MessageTemplate GetTVRecommendations()
         {
             return Keyboards.TVMyRecommendations(TVRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
@@ -507,6 +527,20 @@ namespace Freetime_Planner
         {
             Keyboards.TVMyRecommendationsMessage(TVRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
+
+        public MessageTemplate RandomTV()
+        { 
+            if (!RandomTVIsUpdating)
+            {
+                RandomTVIsUpdating = true;
+                UpdateTVRandomAsync();
+            }
+            if (TVRandomDict == null || TVRandomDict.Count == 0)
+                TVRandomDict = TV.RandomTV;
+            //Console.WriteLine(string.Join("\n", TVRandomDict.Values.Select(f => f.nameRu)));
+            return Keyboards.RandomTVResults(TVRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+        }
+
         public string GetPlannedTV()
         {
             string res = "Планируемые к просмотру сериалы:\n";
@@ -664,6 +698,49 @@ namespace Freetime_Planner
                 TVRecommendations.Add(kv.Key, kv.Value);
             });
             Users.Unload();
+        }
+
+        private async void UpdateTVRandomAsync()
+        {
+            await Task.Run(() => UpdateTVRandom());
+        }
+
+        /// <summary>
+        /// На основании названия фильма добавляет в список рекомендаций похожие фильмы
+        /// </summary>
+        /// <param name="nameEn"></param>
+        private void UpdateTVRandom()
+        {
+            while (true)
+            {
+                var dict = new Dictionary<int, RandomTV.Film>();
+                Random random = new Random();
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "TV_SHOW");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                IRestResponse response = client.Execute(request);
+                var results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content);
+                if (results == null && results.films.Count == 0)
+                    continue;
+                for (int i = 0; i < results.films.Count; ++i)
+                {
+                    var t = results.films[i];
+                    t.VKPhotoID = Attachments.RandomTVPosterID(t);
+                    if (t.VKPhotoID == null)
+                        continue;
+                    dict[t.filmId] = t;
+                }
+                TVRandomDict = dict;
+                RandomTVIsUpdating = false;
+                Users.Unload();
+                return;
+            }
         }
 
 

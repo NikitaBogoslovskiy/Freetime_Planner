@@ -273,6 +273,12 @@ namespace Freetime_Planner
                 WritelnColor("Загрузка популярных сериалов...", ConsoleColor.White);
                 TV.UploadPopularTV();
                 WritelnColor("Список популярных сериалов загружен", ConsoleColor.Green);
+                WritelnColor("Загрузка случайных фильмов...", ConsoleColor.White);
+                Film.UploadRandomFilms();
+                WritelnColor("Список случайных фильмов загружен", ConsoleColor.Green);
+                WritelnColor("Загрузка случайных сериалов...", ConsoleColor.White);
+                TV.UploadRandomTV();
+                WritelnColor("Список случайных сериалов загружен", ConsoleColor.Green);
                 InitTimers();
                 WritelnColor("Таймеры запущены", ConsoleColor.Green);
 
@@ -812,8 +818,8 @@ namespace Freetime_Planner
                                     SendMessage("Ищу случайные фильмы...");
                                     if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
-                                        vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
-                                        template = user.Random();
+                                        //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                        template = user.RandomFilms();
                                         keyboard = null;
                                         SendMessage("Результаты поиска");
                                         template = null;
@@ -1022,10 +1028,10 @@ namespace Freetime_Planner
                                 //"Рандомный сериал"
                                 case Modes.Mode.Random:
                                    SendMessage("Ищу случайные сериалы...");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                    //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
                                     if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                     {
-                                        template = TV.Methods.Random();
+                                        template = user.RandomTV();
                                         keyboard = null;
                                         SendMessage("Результаты поиска");
                                         template = null;
@@ -1430,6 +1436,18 @@ namespace Freetime_Planner
                     TV.UpdatePopularTV();
                     TV.LastPopularTVUpdate = DateTime.Now;
                     TV.UnloadPopularTV();
+                }
+                if (DateTime.Now.CompareTo(Film.LastRandomFilmsUpdate.AddDays(1)) != -1)
+                {
+                    Film.UpdateRandomFilms();
+                    Film.LastRandomFilmsUpdate = DateTime.Now;
+                    Film.UnloadRandomFilms();
+                }
+                if (DateTime.Now.CompareTo(TV.LastRandomTVUpdate.AddDays(1)) != -1)
+                {
+                    TV.UpdateRandomTV();
+                    TV.LastRandomTVUpdate = DateTime.Now;
+                    TV.UnloadRandomTV();
                 }
             }
         }

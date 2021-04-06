@@ -135,6 +135,84 @@ namespace Freetime_Planner
         }
         #endregion
 
+
+        #region RandomTV
+
+        public static Dictionary<int, RandomTV.Film> RandomTV { get; set; }
+        public static string RandomTVPath;
+        public static DateTime LastRandomTVUpdate { get; set; }
+
+        /// <summary>
+        /// Загружает список популярных фильмов из json-файла в поле PopularFilms. Если такого json-файла нет, то создает и выгружает список
+        /// </summary>
+        public static void UploadRandomTV()
+        {
+            if (!File.Exists(RandomTVPath))
+            {
+                UpdateRandomTV();
+                LastRandomTVUpdate = DateTime.Now;
+                UnloadRandomTV();
+            }
+            else
+            {
+                try
+                {
+                    var pair = JsonConvert.DeserializeObject<KeyValuePair<DateTime, Dictionary<int, RandomTV.Film>>>(File.ReadAllText(RandomTVPath));
+                    LastRandomTVUpdate = pair.Key;
+                    RandomTV = pair.Value;
+                }
+                catch (Exception)
+                {
+                    UpdateRandomTV();
+                    LastRandomTVUpdate = DateTime.Now;
+                    UnloadRandomTV();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Выгружает список популярных фильмов из PopularFilms в json-файл
+        /// </summary>
+        public static void UnloadRandomTV() => File.WriteAllText(RandomTVPath, JsonConvert.SerializeObject(new KeyValuePair<DateTime, Dictionary<int, RandomTV.Film>>(LastRandomTVUpdate, RandomTV)));
+
+        /// <summary>
+        /// Обновляет список популярных фильмов
+        /// </summary>
+        public static void UpdateRandomTV()
+        {
+            while (true)
+            {
+                Random random = new Random();
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "TV_SHOW");
+                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                request.AddQueryParameter("genre", Film.PopularGenres[random.Next(0, Film.PopularGenres.Length)].ToString());
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                IRestResponse response = client.Execute(request);
+                var results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content).films;
+                if (results == null || results.Count == 0)
+                    continue;
+
+                var dict = new Dictionary<int, RandomTV.Film>();
+                for (int i = 0; i < results.Count; ++i)
+                {
+                    results[i].VKPhotoID = Attachments.RandomTVPosterID(results[i]);
+                    if (results[i].VKPhotoID == null)
+                        continue;
+                    dict[results[i].filmId] = results[i];
+                }
+                RandomTV = dict;
+                return;
+            }
+        }
+
+
+        #endregion
+
         //Класс, необходимый для десериализации ответа с Кинопоиска при запросе сериала по его ID
         #region TVObject
         public class Country
@@ -317,7 +395,7 @@ namespace Freetime_Planner
                 else
                      Keyboards.TVResultsMessage(results);
             }
-            public static MessageTemplate Random()
+            /*public static MessageTemplate Random()
             {
                 Random random = new Random();
                 int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
@@ -338,7 +416,7 @@ namespace Freetime_Planner
 
                 var results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content);
                 return Keyboards.RandomTVResults(results);
-            }
+            }*/
             //------- not mobile -------
             public static void Random_inMessage()
             {
@@ -525,6 +603,7 @@ namespace Freetime_Planner
             public string posterUrl { get; set; }
             public string posterUrlPreview { get; set; }
             public string nameEn { get; set; }
+            public string VKPhotoID { get; set; }
         }
 
         public class Results
