@@ -24,14 +24,16 @@ namespace Freetime_Planner
             public bool IsTrailer { get; set; }
             public MailObject() { }
 
-            public void createPostersFacts(string filmID)
+            public void createPostersFacts(User user, string filmID)
             {
                 IsTrailer = false;
                 var client1 = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/" + filmID);
                 var request1 = new RestRequest(Method.GET);
                 request1.AddHeader("X-API-KEY", Bot._kp_key);
                 IRestResponse response1 = client1.Execute(request1);
-                var film = JsonConvert.DeserializeObject<Film.FilmObject>(response1.Content);
+                Film.FilmObject film;
+                try { film = JsonConvert.DeserializeObject<Film.FilmObject>(response1.Content); }
+                catch(Exception) { film = null; }
                 if (film != null)
                 {
                     var name = film.data.nameRu ?? film.data.nameEn;
@@ -41,14 +43,16 @@ namespace Freetime_Planner
                     var request2 = new RestRequest(Method.GET);
                     request2.AddHeader("X-API-KEY", Bot._kp_key);
                     IRestResponse response2 = client2.Execute(request2);
-                    var frames = JsonConvert.DeserializeObject<Frames>(response2.Content);
+                    Frames frames;
+                    try { frames = JsonConvert.DeserializeObject<Frames>(response2.Content); }
+                    catch(Exception) { frames = null; }
                     if (frames != null && frames.frames != null && frames.frames.Count != 0)
                     {
                         var posters = new List<Photo>();
                         IEnumerable<string> links = frames.frames.Select(f => f.image).Shuffle().Take(Math.Min(5, frames.frames.Count));
                         foreach (var link in links)
                         {
-                            if (Attachments.PosterObject(link, filmID, out Photo photo))
+                            if (Attachments.PosterObject(user, link, filmID, out Photo photo))
                                 posters.Add(photo);
                         }
                         if (posters.Count != 0)
@@ -65,9 +69,35 @@ namespace Freetime_Planner
 
                     var soundtrack = new List<Audio>();
                     if (film.data.type == "FILM")
-                        Film.Methods.Soundtrack(film.data.nameEn ?? film.data.nameRu, year, soundtrack, 3);
+                    {
+                        string fname, addition;
+                        if (film.data.nameEn != null)
+                        {
+                            fname = film.data.nameEn;
+                            addition = "ost";
+                        }
+                        else
+                        {
+                            fname = film.data.nameRu;
+                            addition = "саундтрек";
+                        }
+                        Film.Methods.DownloadSoundtrack(fname, addition, soundtrack, 2);
+                    }
                     else if (film.data.type == "TV_SHOW")
-                        TV.Methods.Soundtrack(film.data.nameEn ?? film.data.nameRu, soundtrack, 3);
+                    {
+                        string fname, addition;
+                        if (film.data.nameEn != null)
+                        {
+                            fname = film.data.nameEn;
+                            addition = "ost";
+                        }
+                        else
+                        {
+                            fname = film.data.nameRu;
+                            addition = "саундтрек";
+                        }
+                        TV.Methods.DownloadSoundtrack(fname, addition, soundtrack, 2);
+                    }
                     id = filmID;
                     Name = name;
                     Year = year;

@@ -283,14 +283,14 @@ namespace Freetime_Planner
         #endregion
 
 
-        public static Photo PosterObject(string url, string filmID)
+        public static Photo PosterObject(User user, string url, string filmID)
         {
             string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", filmID, Guid.NewGuid());
             WebClient wc = new WebClient();
             try
             {
                 wc.DownloadFile(url, path);
-                var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(Bot.user.ID);
+                var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(user.ID);
                 var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
                 File.Delete(path);
@@ -299,14 +299,14 @@ namespace Freetime_Planner
             catch (Exception e)
             {
                 WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
-                var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(Bot.user.ID);
+                var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(user.ID);
                 var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, DefaultPosterPath));
                 var photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
                 return photo;
             }
         }
 
-        public static bool PosterObject(string url, string filmID, out Photo photo)
+        public static bool PosterObject(User user, string url, string filmID, out Photo photo)
         {
             string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", filmID, Guid.NewGuid());
             WebClient wc = new WebClient();
@@ -319,7 +319,7 @@ namespace Freetime_Planner
                     File.Delete(path);
                     return false;
                 }
-                var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(Bot.user.ID);
+                var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(user.ID);
                 var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
                 File.Delete(path);
@@ -456,7 +456,9 @@ namespace Freetime_Planner
         public static bool SizeIsWell(string path)
         {
             Bitmap pic = new Bitmap(path);
-            return pic.Width >= 221 && pic.Height >= 136;
+            bool res = pic.Width >= 221 && pic.Height >= 136;
+            pic.Dispose();
+            return res;
         }
 
         /// <summary>
@@ -502,6 +504,27 @@ namespace Freetime_Planner
             //Dispose the result since we saved it
             croppedImage.Dispose();
             return true;
+        }
+    }
+
+    public class FilmSountracks
+    {
+        public List<Audio> Tracks { get; set; }
+        public DateTime DownloadTime { get; set; }
+        public bool IsEmpty { get; set; }
+        public bool IsLoading { get; set; }
+        public FilmSountracks()
+        {
+            DownloadTime = DateTime.Now;
+            IsEmpty = true;
+            IsLoading = true;
+        }
+        public void Update(List<Audio> _tracks)
+        {
+            Tracks = _tracks;
+            DownloadTime = DateTime.Now;
+            IsEmpty = false;
+            IsLoading = false;
         }
     }
 

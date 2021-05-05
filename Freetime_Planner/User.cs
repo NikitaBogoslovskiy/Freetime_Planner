@@ -8,6 +8,7 @@ using VkNet.Model.Template;
 using System.Threading.Tasks;
 using System.Linq;
 using RestSharp;
+using VkNet.Model.Attachments;
 
 namespace Freetime_Planner
 {
@@ -71,6 +72,10 @@ namespace Freetime_Planner
         public Queue<Mailing.MailObject> MailObjects { get; set; }
 
         public DateTime LastPlannedFilmsUpdate { get; set; }
+        
+        public Dictionary<string, FilmSountracks> FilmTracks { get; set; }
+        public Dictionary<string, FilmSountracks> TVTracks { get; set; }
+        public Dictionary<string, int> LastFood { get; set; }
 
         /// <summary>
         /// Конструктор пользователя
@@ -102,6 +107,14 @@ namespace Freetime_Planner
             RandomFilmsIsUpdating = false;
             TVRandomDict = TV.RandomTV;
             RandomTVIsUpdating = false;
+            FilmTracks = new Dictionary<string, FilmSountracks>();
+            TVTracks = new Dictionary<string, FilmSountracks>();
+            LastFood = new Dictionary<string, int>
+            {
+                ["Cocktail"] = -1,
+                ["Dessert"] = -1,
+                ["Snack"] = -1
+            };
         }
 
         /// <summary>
@@ -163,7 +176,7 @@ namespace Freetime_Planner
             if (isTrailer)
                 mail.createTrailer(id, ruName, engName, date.Substring(0, 4));
             else
-                mail.createPostersFacts(id);
+                mail.createPostersFacts(this, id);
             if (mail.IsValid && !MailObjects.Any(o => o.id == id))
                 MailObjects.Enqueue(mail);
             Users.Unload();
@@ -180,41 +193,18 @@ namespace Freetime_Planner
             return Keyboards.FilmMyRecommendations(FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
 
-        public void GetFilmRecommendationsMessage()
+        public void GetFilmRecommendationsMessage(User user)
         {
             
-            Keyboards.FilmMyRecommendationsMessage(FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
+            Keyboards.FilmMyRecommendationsMessage(user, FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
 
-        }
-        //Переключатель между 0 и 1 
-        int Switch(int b)
-        {
-            if (b==0)
-                return ++b;
-            else return --b;
         }
         /// <summary>
         /// Возвращает карусель из фильмов, которые были получены в результате случайного поиска фильма (используется класс FilmResults)
         /// </summary>
         /// <returns></returns>
         public MessageTemplate RandomFilms()
-        {
-            /*Random random = new Random();
-            
-            string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
-           
-
-            var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
-            var request = new RestRequest(Method.GET);
-            request.AddHeader("X-API-KEY", Bot._kp_key);
-            request.AddQueryParameter("type", "FILM");
-            request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
-            request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
-           
-            IRestResponse response = client.Execute(request);
-
-            var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);*/
-
+        { 
             if (!RandomFilmsIsUpdating)
             {
                 RandomFilmsIsUpdating = true;
@@ -222,7 +212,6 @@ namespace Freetime_Planner
             }
             if (FilmRandomDict == null || FilmRandomDict.Count == 0)
                 FilmRandomDict = Film.RandomFilms;
-            //Console.WriteLine(string.Join("\n", FilmRandomDict.Values.Select(f => f.nameRu)));
             return Keyboards.RandomFilmResults(FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
         }
         
@@ -311,6 +300,7 @@ namespace Freetime_Planner
             ind = PlannedFilms[1].FindIndex(film => film.data.filmId == int.Parse(filmID));
             if (ind != -1)
                 PlannedFilms[1].RemoveAt(ind);
+            Users.Unload();
         }
 
         /// <summary>
@@ -320,7 +310,6 @@ namespace Freetime_Planner
         public void LikeFilm(string nameEn)
         {
             UpdateFilmRecommendationsAsync(nameEn);
-            //return;
         }
 
         /// <summary>
@@ -335,6 +324,27 @@ namespace Freetime_Planner
                 IncRecommendedFilmsAsync();
             Users.Unload();
         }
+
+        /// <summary>
+        /// Возвращает список аудиозаписей по названию фильма
+        /// </summary>
+        /// <param name="filmName"></param>
+        /// <returns></returns>
+        public bool FilmSoundtrack(string filmName, string addition, ref List<Audio> audios)
+        {
+            if (!FilmTracks.ContainsKey(filmName))
+                AddFilmSoundtrack(filmName, addition);
+            var obj = FilmTracks[filmName];
+            while (obj.IsLoading) { }
+            if (obj.IsEmpty)
+                return false;
+            else
+            {
+                audios = obj.Tracks;
+                return true;
+            }
+        }
+
         /// <summary>
         /// Добавляет популярные фильмы в список рекомендуемых фильмов асинхронно
         /// </summary>
@@ -353,29 +363,7 @@ namespace Freetime_Planner
             });
             Users.Unload();
         }
-        /*
-        /// <summary>
-        /// Удаляет фильм из списка планируемых фильмов и добавляет его в черный список через вызов HideFilm()
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="filmID"></param>
-        public void AlreadyWatchedFilm(int index, int filmID)
-        {
-            //нужно удалить фильм из списка PlannedFilms
-            HideFilm(filmID);
-            return;
-        }
-        
-        /// <summary>
-        /// Возвращает информацию о фильме в текстовом виде по его ID
-        /// </summary>
-        /// <param name="filmID"></param>
-        /// <returns></returns>
-        public string FullFilmInfo(int filmID)
-        {
-            return null;
-        }
-        */
+
         /// <summary>
         /// Асинхронно вызывает функцию UpdateFilmRecommendations
         /// </summary>
@@ -404,7 +392,9 @@ namespace Freetime_Planner
             request1.AddQueryParameter("api_key", Bot._mdb_key);
             request1.AddQueryParameter("query", nameEn);
             IRestResponse response1 = client1.Execute(request1);
-            var deserialized1 = JsonConvert.DeserializeObject<MDBResults>(response1.Content);
+            MDBResults deserialized1;
+            try { deserialized1 = JsonConvert.DeserializeObject<MDBResults>(response1.Content); }
+            catch(Exception) { return; }
             if (deserialized1 == null || deserialized1.total_pages == 0)
                 return;
             string sid = deserialized1.results.First().id.ToString();
@@ -414,7 +404,9 @@ namespace Freetime_Planner
             var request2 = new RestRequest(Method.GET);
             request2.AddQueryParameter("api_key", Bot._mdb_key);
             IRestResponse response2 = client2.Execute(request2);
-            var deserialized2 = JsonConvert.DeserializeObject<MDBResults>(response2.Content);
+            MDBResults deserialized2;
+            try { deserialized2 = JsonConvert.DeserializeObject<MDBResults>(response2.Content); }
+            catch(Exception) { return; }
             if (deserialized2 == null || deserialized2.total_pages == 0)
                 return;
             string[] names = deserialized2.results.Select(film => film.title).ToArray();
@@ -428,7 +420,9 @@ namespace Freetime_Planner
                 KPrequest1.AddHeader("accept", "application/json");
                 KPrequest1.AddQueryParameter("keyword", name);
                 IRestResponse KPresponse1 = KPclient1.Execute(KPrequest1);
-                var deserialized = JsonConvert.DeserializeObject<FilmResults.Results>(KPresponse1.Content);
+                FilmResults.Results deserialized;
+                try { deserialized = JsonConvert.DeserializeObject<FilmResults.Results>(KPresponse1.Content); }
+                catch(Exception) { deserialized = null; }
 
                 //проверка успешности десериализации
                 if (deserialized != null)
@@ -452,7 +446,9 @@ namespace Freetime_Planner
                         KPrequest2.AddQueryParameter("append_to_response", "BUDGET");
                         KPrequest2.AddQueryParameter("append_to_response", "RATING");
                         IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
-                        var film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content);
+                        Film.FilmObject film;
+                        try { film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content); }
+                        catch(Exception) { film = null; }
                         if (film == null)
                             continue;
                         film.Priority = 2;
@@ -497,7 +493,9 @@ namespace Freetime_Planner
                 request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
                 request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
                 IRestResponse response = client.Execute(request);
-                var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
+                RandomFilms.Results results;
+                try { results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content); }
+                catch(Exception) { results = null; }
                 if (results == null && results.films.Count == 0)
                     continue;
                 for (int i = 0; i < results.films.Count; ++i)
@@ -515,6 +513,42 @@ namespace Freetime_Planner
             }
         }
 
+        public async void AddFilmSoundtrackAsync(string name, string addition)
+        {
+            await Task.Run(() => AddFilmSoundtrack(name, addition));
+        }
+
+        public void AddFilmSoundtrack(string name, string addition)
+        {
+            string[] song_names;
+            var res = new FilmSountracks();
+            try
+            {
+                song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
+                var audios = new List<Audio>();
+                for (int i = 0; i < song_names.Length; ++i)
+                {
+                    var collection = Bot.private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
+                    {
+                        Autocomplete = true,
+                        Query = song_names[i]
+                    });
+                    if (collection.Count > 0)
+                    {
+                        audios.Add(collection[0]);
+                    }
+                }
+                res.Update(audios);
+                FilmTracks[name] = res;
+                Users.Unload();
+            }
+            catch (Exception)
+            {
+                FilmTracks[name] = res;
+                FilmTracks[name].IsLoading = false;
+                return;
+            }
+        }
 
             //--------------Пользовательские методы для сериалов--------------
 
@@ -523,9 +557,9 @@ namespace Freetime_Planner
             return Keyboards.TVMyRecommendations(TVRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
 
-        public void GetTVRecommendationsMessage()
+        public void GetTVRecommendationsMessage(User user)
         {
-            Keyboards.TVMyRecommendationsMessage(TVRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
+            Keyboards.TVMyRecommendationsMessage(user, TVRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
         }
 
         public MessageTemplate RandomTV()
@@ -581,6 +615,26 @@ namespace Freetime_Planner
                 IncRecommendedTVAsync();
             Users.Unload();
         }
+
+        /// <summary>
+        /// Возвращает список аудиозаписей по названию фильма
+        /// </summary>
+        /// <param name="filmName"></param>
+        /// <returns></returns>
+        public bool TVSoundtrack(string filmName, string addition, ref List<Audio> audios)
+        {
+            if (!TVTracks.ContainsKey(filmName))
+                AddTVSoundtrack(filmName, addition);
+            var obj = TVTracks[filmName];
+            while (obj.IsLoading) { }
+            if (obj.IsEmpty)
+                return false;
+            else
+            {
+                audios = obj.Tracks;
+                return true;
+            }
+        }
         /*
         public void AlreadyWatchedTV(int index, int TVID)
         {
@@ -615,7 +669,9 @@ namespace Freetime_Planner
             request1.AddQueryParameter("api_key", Bot._mdb_key);
             request1.AddQueryParameter("query", nameEn);
             IRestResponse response1 = client1.Execute(request1);
-            var deserialized1 = JsonConvert.DeserializeObject<MDBResultsTV>(response1.Content);
+            MDBResultsTV deserialized1;
+            try { deserialized1 = JsonConvert.DeserializeObject<MDBResultsTV>(response1.Content); }
+            catch(Exception) { return; }
             if (deserialized1 == null || deserialized1.total_pages == 0)
                 return;
             string sid = deserialized1.results.First().id.ToString();
@@ -625,7 +681,9 @@ namespace Freetime_Planner
             var request2 = new RestRequest(Method.GET);
             request2.AddQueryParameter("api_key", Bot._mdb_key);
             IRestResponse response2 = client2.Execute(request2);
-            var deserialized2 = JsonConvert.DeserializeObject<MDBRecommendations>(response2.Content);
+            MDBRecommendations deserialized2;
+            try { deserialized2 = JsonConvert.DeserializeObject<MDBRecommendations>(response2.Content); }
+            catch(Exception) { return; }
             if (deserialized2 == null || deserialized2.total_pages == 0)
                 return;
             string[] names = deserialized2.results.Select(film => film.name).ToArray();
@@ -639,7 +697,9 @@ namespace Freetime_Planner
                 KPrequest1.AddHeader("accept", "application/json");
                 KPrequest1.AddQueryParameter("keyword", name);
                 IRestResponse KPresponse1 = KPclient1.Execute(KPrequest1);
-                var deserialized = JsonConvert.DeserializeObject<TVResults.Results>(KPresponse1.Content);
+                TVResults.Results deserialized;
+                try { deserialized = JsonConvert.DeserializeObject<TVResults.Results>(KPresponse1.Content); }
+                catch (Exception) { deserialized = null; }
 
                 //проверка успешности десериализации
                 if (deserialized != null)
@@ -662,7 +722,9 @@ namespace Freetime_Planner
                         KPrequest2.AddHeader("accept", "application/json");
                         KPrequest2.AddQueryParameter("append_to_response", "RATING");
                         IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
-                        var tv = JsonConvert.DeserializeObject<TV.TVObject>(KPresponse2.Content);
+                        TV.TVObject tv;
+                        try { tv = JsonConvert.DeserializeObject<TV.TVObject>(KPresponse2.Content); }
+                        catch(Exception) { tv = null; }
                         if (tv == null)
                             continue;
                         tv.Priority = 2;
@@ -725,7 +787,9 @@ namespace Freetime_Planner
                 request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
                 request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
                 IRestResponse response = client.Execute(request);
-                var results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content);
+                RandomTV.Results results;
+                try { results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content); }
+                catch(Exception) { results = null; }
                 if (results == null && results.films.Count == 0)
                     continue;
                 for (int i = 0; i < results.films.Count; ++i)
@@ -739,6 +803,43 @@ namespace Freetime_Planner
                 TVRandomDict = dict;
                 RandomTVIsUpdating = false;
                 Users.Unload();
+                return;
+            }
+        }
+
+        public async void AddTVSoundtrackAsync(string name, string addition)
+        {
+            await Task.Run(() => AddTVSoundtrack(name, addition));
+        }
+
+        public void AddTVSoundtrack(string name, string addition)
+        {
+            string[] song_names;
+            var res = new FilmSountracks();
+            try
+            {
+                song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
+                var audios = new List<Audio>();
+                for (int i = 0; i < song_names.Length; ++i)
+                {
+                    var collection = Bot.private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
+                    {
+                        Autocomplete = true,
+                        Query = song_names[i]
+                    });
+                    if (collection.Count > 0)
+                    {
+                        audios.Add(collection[0]);
+                    }
+                }
+                res.Update(audios);
+                TVTracks[name] = res;
+                Users.Unload();
+            }
+            catch (Exception)
+            {
+                TVTracks[name] = res;
+                TVTracks[name].IsLoading = false;
                 return;
             }
         }
@@ -770,8 +871,15 @@ namespace Freetime_Planner
         /// <returns></returns>
         public static DateTime StringToDate(string date)
         {
-            Match m = Regex.Match(date, @"(\d{4})-(\d{2})-(\d{2})");
-            return new DateTime(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value), int.Parse(m.Groups[3].Value));
+            try
+            {
+                Match m = Regex.Match(date, @"(\d{4})-(\d{2})-(\d{2})");
+                return new DateTime(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value), int.Parse(m.Groups[3].Value));
+            }
+            catch(Exception)
+            {
+                return DateTime.MinValue;
+            }
         }
     }
 
