@@ -102,7 +102,7 @@ namespace Freetime_Planner
                 list.AddRange(deserializedB.results);
 
             //параллельный обход списка
-            foreach(var result in list)
+            foreach (var result in list)
             {
                 //запрос фильма по его названию
                 var KPclient1 = new RestSharp.RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
@@ -563,34 +563,34 @@ namespace Freetime_Planner
                     Keyboards.FilmResultsMessage(user, results);
             }
 
-            
+
 
             /// <summary>
             /// Возвращает карусель из фильмов, которые были получены в результате случайного поиска фильма (используется класс FilmResults)
             /// </summary>
             /// <returns></returns>
-           /* public static MessageTemplate Random()
-            {
-                Random random = new Random();
-                //int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
-                //int filmYearUpperLine = random.Next(filmYearBottomLine + 5, DateTime.Now.Year+1);
-                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
-                //int filmRatingBottomLine = random.Next(4, 8);
+            /* public static MessageTemplate Random()
+             {
+                 Random random = new Random();
+                 //int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
+                 //int filmYearUpperLine = random.Next(filmYearBottomLine + 5, DateTime.Now.Year+1);
+                 string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                 //int filmRatingBottomLine = random.Next(4, 8);
 
-                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
-                var request = new RestRequest(Method.GET);
-                request.AddHeader("X-API-KEY", Bot._kp_key);
-                request.AddQueryParameter("type", "FILM");
-                request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
-                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
-                //request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
-                //request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
-                //request.AddQueryParameter("ratingFrom", filmRatingBottomLine.ToString());
-                IRestResponse response = client.Execute(request);
+                 var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                 var request = new RestRequest(Method.GET);
+                 request.AddHeader("X-API-KEY", Bot._kp_key);
+                 request.AddQueryParameter("type", "FILM");
+                 request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
+                 request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+                 //request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                 //request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                 //request.AddQueryParameter("ratingFrom", filmRatingBottomLine.ToString());
+                 IRestResponse response = client.Execute(request);
 
-                var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
-                return Keyboards.RandomFilmResults(results);
-            }*/
+                 var results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content);
+                 return Keyboards.RandomFilmResults(results);
+             }*/
             //not mobile
             public static void Random_inMessage(User user)
             {
@@ -614,6 +614,7 @@ namespace Freetime_Planner
                 RandomFilms.Results results;
                 try { results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content); }
                 catch(Exception) { results = null; }
+
 
                 Keyboards.RandomFilmResultsMessage(user, results);
             }
@@ -649,6 +650,44 @@ namespace Freetime_Planner
             }
 
             /// <summary>
+            /// Возвращает список актеров по ID фильма
+            /// </summary>
+            /// <param name="filmId"></param>
+            /// <returns></returns>
+            public static List<ActorResults.Actor> Actors(string filmId)
+            {
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v1/staff");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("filmId", filmId);
+
+                IRestResponse response = client.Execute(request);
+
+                var result = JsonConvert.DeserializeObject<List<ActorResults.Actor>>(response.Content).Where(x => x.professionKey == "ACTOR").ToList();
+
+                return result;
+            }
+
+            /// <summary>
+            /// Возвращает информацию по ID актера
+            /// </summary>
+            /// <param name="staffId"></param>
+            /// <returns></returns>
+            public static ActorResults.ActorFullInfo ActorInfo(string staffId)
+            {
+                var client = new RestClient($"https://kinopoiskapiunofficial.tech/api/v1/staff/{staffId}");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddHeader("accept", "application/json");
+
+                IRestResponse response = client.Execute(request);
+
+                var result = JsonConvert.DeserializeObject<ActorResults.ActorFullInfo>(response.Content);
+
+                return result;
+            }
+
+            /// <summary>
             /// Возвращает видеорецепт блюда по жанрам фильма
             /// </summary>
             /// <param name="genres"></param>
@@ -677,7 +716,7 @@ namespace Freetime_Planner
                 wc.DownloadString(video.UploadUrl);
                 return video;
             }
-            
+
             /// <summary>
             /// Возвращает клавиатуру с ссылками на сервисы для просмотра фильма
             /// </summary>
@@ -814,6 +853,68 @@ namespace Freetime_Planner
             public List<Film> films { get; set; }
         }
     }
+    #endregion
+
+    //Класс, необходимый для десериализации ответа с Кинопоиска при поиске актера
+    #region Actor
+
+    public static class ActorResults
+    {
+        public class Actor
+        {
+            public int staffId { get; set; }
+            public string nameRu { get; set; }
+            public string nameEn { get; set; }
+            public string posterUrl { get; set; }
+            public string professionText { get; set; }
+            public string professionKey { get; set; }
+        }
+
+        public class ActorFullInfo
+        {
+            public int personId { get; set; }
+            public string webUrl { get; set; }
+            public string nameRu { get; set; }
+            public string nameEn { get; set; }
+            public string sex { get; set; }
+            public string posterUrl { get; set; }
+            public string growth { get; set; }
+            public string birthday { get; set; }
+            public string death { get; set; }
+            public int age { get; set; }
+            public string birthplace { get; set; }
+            public string deathplace { get; set; }
+            public int hasAwards { get; set; }
+            public string profession { get; set; }
+            public List<string> facts { get; set; }
+            public List<Spouse> spouses { get; set; }
+            public List<Film> films { get; set; }
+        }
+
+        public class Spouse
+        {
+            public int personId { get; set; }
+            public string name { get; set; }
+            public string divorced { get; set; }
+            public string divorcedReason { get; set; }
+            public string sex { get; set; }
+            public int children { get; set; }
+            public string webUrl { get; set; }
+            public string relation { get; set; }
+        }
+
+        public class Film
+        {
+            public int filmId { get; set; }
+            public string nameRu { get; set; }
+            public string nameEn { get; set; }
+            public string rating { get; set; }
+            public bool general { get; set; }
+            public string description { get; set; }
+            public string professionKey { get; set; }
+        }
+    }
+
     #endregion
 
     //Класс, необходимый для десериализации ответа с MDB при поиске популярных или рекомендуемых фильмов
