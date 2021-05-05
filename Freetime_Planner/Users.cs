@@ -50,15 +50,19 @@ namespace Freetime_Planner
         /// </summary>
         public static void Unload()
         {
-            while (true)
+            try
             {
-                if (FileIsUsed)
-                    continue;
-                FileIsUsed = true;
-                File.WriteAllText(users_path, JsonConvert.SerializeObject(Users_Dict));
-                FileIsUsed = false;
-                return;
+                while (true)
+                {
+                    if (FileIsUsed)
+                        continue;
+                    FileIsUsed = true;
+                    File.WriteAllText(users_path, JsonConvert.SerializeObject(Users_Dict));
+                    FileIsUsed = false;
+                    return;
+                }
             }
+            catch(Exception) { }
         }
 
         /// <summary>

@@ -25,17 +25,24 @@ namespace Freetime_Planner
         public static string GenreFoodPath;
         public static Random r = new Random();
         public static WebClient wc = new WebClient();
-        public static Video Snack()
+        public static Video Snack(User user)
         {
+            int ind;
+            do { ind = r.Next(0, Snacks.Length - 1); } while (ind == user.LastFood["Snack"]);
+            user.LastFood["Snack"] = ind;
             var client = new RestSharp.RestClient("https://www.googleapis.com/youtube/v3/search");
             var request = new RestRequest(Method.GET);
             request.AddQueryParameter("key", Bot._youtube_key);
             request.AddQueryParameter("part", "snippet");
-            request.AddQueryParameter("q", Snacks[r.Next(0, Snacks.Length-1)]);
+            request.AddQueryParameter("q", Snacks[ind]);
             request.AddQueryParameter("videoDuration", "short");
             request.AddQueryParameter("type", "video");
             IRestResponse response = client.Execute(request);
-            var results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content);
+            YouTube.YouTubeResults results;
+            try { results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content); }
+            catch(Exception) { return null; }
+            if (results == null || results.items.Count == 0)
+                return null;
 
             var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
             {
@@ -45,17 +52,24 @@ namespace Freetime_Planner
             return video;
         }
 
-        public static Video Cocktail()
+        public static Video Cocktail(User user)
         {
+            int ind;
+            do { ind = r.Next(0, Cocktails.Length - 1); } while (ind == user.LastFood["Cocktail"]);
+            user.LastFood["Cocktail"] = ind;
             var client = new RestSharp.RestClient("https://www.googleapis.com/youtube/v3/search");
             var request = new RestRequest(Method.GET);
             request.AddQueryParameter("key", Bot._youtube_key);
             request.AddQueryParameter("part", "snippet");
-            request.AddQueryParameter("q", "коктейль " + Cocktails[r.Next(0, Cocktails.Length - 1)]);
+            request.AddQueryParameter("q", "коктейль " + Cocktails[ind]);
             request.AddQueryParameter("videoDuration", "short");
             request.AddQueryParameter("type", "video");
             IRestResponse response = client.Execute(request);
-            var results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content);
+            YouTube.YouTubeResults results;
+            try { results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content); }
+            catch (Exception) { return null; }
+            if (results == null || results.items.Count == 0)
+                return null;
 
             var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
             {
@@ -65,17 +79,24 @@ namespace Freetime_Planner
             return video;
         }
 
-        public static Video Dessert()
+        public static Video Dessert(User user)
         {
+            int ind;
+            do { ind = r.Next(0, Desserts.Length - 1); } while (ind == user.LastFood["Dessert"]);
+            user.LastFood["Dessert"] = ind;
             var client = new RestSharp.RestClient("https://www.googleapis.com/youtube/v3/search");
             var request = new RestRequest(Method.GET);
             request.AddQueryParameter("key", Bot._youtube_key);
             request.AddQueryParameter("part", "snippet");
-            request.AddQueryParameter("q", Desserts[r.Next(0, Desserts.Length - 1)]);
+            request.AddQueryParameter("q", Desserts[ind]);
             request.AddQueryParameter("videoDuration", "short");
             request.AddQueryParameter("type", "video");
             IRestResponse response = client.Execute(request);
-            var results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content);
+            YouTube.YouTubeResults results;
+            try { results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content); }
+            catch (Exception) { return null; }
+            if (results == null || results.items.Count == 0)
+                return null;
 
             var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
             {
