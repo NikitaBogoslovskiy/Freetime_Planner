@@ -26,7 +26,7 @@ namespace Freetime_Planner
             "Запеченная морковь", "Полезный сэндвич" };
         public static string[] HealthyCocktails = new string[] {"Овсяноблин", "Фруктовое мороженое"," Фитнес кекс","Яблочные чипсы",
             "Диетическое овсяное печенье","Полезное цельнозерновое печенье" };
-        public static string[] HealthyDesserts = new string[] {"Эсмузи из банана и шпината","смузи из сельдерея","смузи из замороженных ягод",
+        public static string[] HealthyDesserts = new string[] {"Cмузи из банана и шпината","смузи из сельдерея","смузи из замороженных ягод",
             "жиросжигающий смузи","смузи из свеклы" };
 
         public static Dictionary<string, string[]> GenreFood = new Dictionary<string, string[]>();
