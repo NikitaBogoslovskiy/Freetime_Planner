@@ -21,21 +21,10 @@ namespace Freetime_Planner
             "мятный безалкогольный", "сливочный безалкогольный"};
         public static string[] Desserts = new string[] {"шоколадный десерт", "фруктовый десерт", "молочный десерт", "мармеладный десерт", 
             "десерт с мороженым", "десерт с яблоком", "ванильный десерт", "десерт пудинг рецепт", "десерт нутелла рецепт", "шоколадный брауни рецепт"};
-
-        public static string[] HealthySnacks = new string[] {"Тост с фруктами и сливочным сыром", "Цветная капуста с медовым соусом", "Помидоры с сыром",
-            "Запеченная морковь", "Полезный сэндвич" };
-        public static string[] HealthyCocktails = new string[] {"Овсяноблин", "Фруктовое мороженое"," Фитнес кекс","Яблочные чипсы",
-            "Диетическое овсяное печенье","Полезное цельнозерновое печенье" };
-        public static string[] HealthyDesserts = new string[] {"Cмузи из банана и шпината","смузи из сельдерея","смузи из замороженных ягод",
-            "жиросжигающий смузи","смузи из свеклы" };
-
         public static Dictionary<string, string[]> GenreFood = new Dictionary<string, string[]>();
         public static string GenreFoodPath;
-        public static Dictionary<string, string[]> GenreHealthyFood = new Dictionary<string, string[]>();
-        public static string GenreHealthyFoodPath;
         public static Random r = new Random();
         public static WebClient wc = new WebClient();
-
         public static Video Snack(User user)
         {
             int ind;
@@ -123,11 +112,6 @@ namespace Freetime_Planner
             {
                 var pair = line.Split("*");
                 GenreFood[pair[0]] = pair[1].Split(",").Select(g => g.Trim()).ToArray();
-            }
-            foreach (var line in File.ReadLines(GenreHealthyFoodPath))
-            {
-                var pair = line.Split("*");
-                GenreHealthyFood[pair[0]] = pair[1].Split(",").Select(g => g.Trim()).ToArray();
             }
         }
 
