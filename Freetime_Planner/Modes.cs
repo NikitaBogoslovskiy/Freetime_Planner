@@ -10,7 +10,7 @@ namespace Freetime_Planner
         {
             Default, Film, TV, Food, Search, Recommendations, PlanToWatch, Random, Dessert,
             Snack, Cocktails, WantToWatch, Watched, Soundtrack, GenreFood, BlackList, More, AlreadyWatched, Yes, No, Back, Help, WhereToWatch, Options,
-            MailFrequency, Everyday, ThreeDays, FiveDays, EveryWeek, NoMail
+            MailFrequency, Everyday, ThreeDays, FiveDays, EveryWeek, NoMail, DietMode, NoLimit, HealthyFood
         }
 
         /// <summary>
@@ -66,6 +66,9 @@ namespace Freetime_Planner
                 case "Раз в пять дней": return Mode.FiveDays;
                 case "Раз в неделю": return Mode.EveryWeek;
                 case "Без рассылки": return Mode.NoMail;
+                case "Режим диеты": return Mode.DietMode;
+                case "Без ограничений": return Mode.NoLimit;
+                case "Здоровое питание": return Mode.HealthyFood;
                 default: throw new ArgumentException("Нажимай кнопки в меню");
             }
         }
