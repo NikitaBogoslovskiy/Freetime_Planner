@@ -75,7 +75,7 @@ namespace Freetime_Planner
         
         public Dictionary<string, FilmSountracks> FilmTracks { get; set; }
         public Dictionary<string, FilmSountracks> TVTracks { get; set; }
-        public Dictionary<string, int> LastFood { get; set; }
+        public Dictionary<string, string> LastFood { get; set; }
         public string LastGenreFood { get; set; }
         public bool OnlyHealthyFood { get; set; }
 
@@ -111,11 +111,11 @@ namespace Freetime_Planner
             RandomTVIsUpdating = false;
             FilmTracks = new Dictionary<string, FilmSountracks>();
             TVTracks = new Dictionary<string, FilmSountracks>();
-            LastFood = new Dictionary<string, int>
+            LastFood = new Dictionary<string, string>
             {
-                ["Cocktail"] = -1,
-                ["Dessert"] = -1,
-                ["Snack"] = -1
+                ["Cocktail"] = "",
+                ["Dessert"] = "",
+                ["Snack"] = ""
             };
             OnlyHealthyFood = false;
         }

@@ -17,16 +17,16 @@ namespace Freetime_Planner
     {
         public static string[] Snacks = new string[] {"бутерброды", "сэндвич рецепт", "гренки", "тарталетки с начинкой", "сырные палочки", "луковые кольца", "закуски с яйцом",
             "закуски с лососем", "кальмары рецепт", "наггетсы", "мини-пицца"};
-        public static string[] Cocktails = new string[] {"с мороженым", "клубничный", "молочный", "банановый", "ванильный", "кофейный безалкогольный",
-            "мятный безалкогольный", "сливочный безалкогольный"};
+        public static string[] Cocktails = new string[] {"коктейль с мороженым", "коктейль клубничный", "коктейль молочный", "коктейль банановый", "коктейль ванильный", "коктейль кофейный безалкогольный",
+            "коктейль мятный безалкогольный", "коктейль сливочный безалкогольный"};
         public static string[] Desserts = new string[] {"шоколадный десерт", "фруктовый десерт", "молочный десерт", "мармеладный десерт", 
             "десерт с мороженым", "десерт с яблоком", "ванильный десерт", "десерт пудинг рецепт", "десерт нутелла рецепт", "шоколадный брауни рецепт"};
 
         public static string[] HealthySnacks = new string[] {"Тост с фруктами и сливочным сыром", "Цветная капуста с медовым соусом", "Помидоры с сыром",
             "Запеченная морковь", "Полезный сэндвич" };
-        public static string[] HealthyCocktails = new string[] {"Овсяноблин", "Фруктовое мороженое"," Фитнес кекс","Яблочные чипсы",
+        public static string[] HealthyDesserts = new string[] {"Овсяноблин", "Фруктовое мороженое"," Фитнес кекс","Яблочные чипсы",
             "Диетическое овсяное печенье","Полезное цельнозерновое печенье" };
-        public static string[] HealthyDesserts = new string[] {"Cмузи из банана и шпината","смузи из сельдерея","смузи из замороженных ягод",
+        public static string[] HealthyCocktails = new string[] {"Cмузи из банана и шпината","смузи из сельдерея","смузи из замороженных ягод",
             "жиросжигающий смузи","смузи из свеклы" };
 
         public static Dictionary<string, string[]> GenreFood = new Dictionary<string, string[]>();
@@ -39,13 +39,18 @@ namespace Freetime_Planner
         public static Video Snack(User user)
         {
             int ind;
-            do { ind = r.Next(0, Snacks.Length - 1); } while (ind == user.LastFood["Snack"]);
-            user.LastFood["Snack"] = ind;
+            string[] snacks;
+            if (user.OnlyHealthyFood)
+                snacks = HealthySnacks;
+            else
+                snacks = Snacks;
+            do { ind = r.Next(0, snacks.Length - 1); } while (snacks[ind] == user.LastFood["Snack"]);
+            user.LastFood["Snack"] = snacks[ind];
             var client = new RestSharp.RestClient("https://www.googleapis.com/youtube/v3/search");
             var request = new RestRequest(Method.GET);
             request.AddQueryParameter("key", Bot._youtube_key);
             request.AddQueryParameter("part", "snippet");
-            request.AddQueryParameter("q", Snacks[ind]);
+            request.AddQueryParameter("q", snacks[ind]);
             request.AddQueryParameter("videoDuration", "short");
             request.AddQueryParameter("type", "video");
             IRestResponse response = client.Execute(request);
@@ -66,13 +71,18 @@ namespace Freetime_Planner
         public static Video Cocktail(User user)
         {
             int ind;
-            do { ind = r.Next(0, Cocktails.Length - 1); } while (ind == user.LastFood["Cocktail"]);
-            user.LastFood["Cocktail"] = ind;
+            string[] cocktails;
+            if (user.OnlyHealthyFood)
+                cocktails = HealthyCocktails;
+            else
+                cocktails = Cocktails;
+            do { ind = r.Next(0, cocktails.Length - 1); } while (cocktails[ind] == user.LastFood["Cocktail"]);
+            user.LastFood["Cocktail"] = cocktails[ind];
             var client = new RestSharp.RestClient("https://www.googleapis.com/youtube/v3/search");
             var request = new RestRequest(Method.GET);
             request.AddQueryParameter("key", Bot._youtube_key);
             request.AddQueryParameter("part", "snippet");
-            request.AddQueryParameter("q", "коктейль " + Cocktails[ind]);
+            request.AddQueryParameter("q", cocktails[ind]);
             request.AddQueryParameter("videoDuration", "short");
             request.AddQueryParameter("type", "video");
             IRestResponse response = client.Execute(request);
@@ -93,13 +103,18 @@ namespace Freetime_Planner
         public static Video Dessert(User user)
         {
             int ind;
-            do { ind = r.Next(0, Desserts.Length - 1); } while (ind == user.LastFood["Dessert"]);
-            user.LastFood["Dessert"] = ind;
+            string[] desserts;
+            if (user.OnlyHealthyFood)
+                desserts = HealthyDesserts;
+            else
+                desserts = Desserts;
+            do { ind = r.Next(0, desserts.Length - 1); } while (desserts[ind] == user.LastFood["Dessert"]);
+            user.LastFood["Dessert"] = desserts[ind];
             var client = new RestSharp.RestClient("https://www.googleapis.com/youtube/v3/search");
             var request = new RestRequest(Method.GET);
             request.AddQueryParameter("key", Bot._youtube_key);
             request.AddQueryParameter("part", "snippet");
-            request.AddQueryParameter("q", Desserts[ind]);
+            request.AddQueryParameter("q", desserts[ind]);
             request.AddQueryParameter("videoDuration", "short");
             request.AddQueryParameter("type", "video");
             IRestResponse response = client.Execute(request);
