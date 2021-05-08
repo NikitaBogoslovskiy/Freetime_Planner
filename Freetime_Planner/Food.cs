@@ -23,6 +23,8 @@ namespace Freetime_Planner
             "десерт с мороженым", "десерт с яблоком", "ванильный десерт", "десерт пудинг рецепт", "десерт нутелла рецепт", "шоколадный брауни рецепт"};
         public static Dictionary<string, string[]> GenreFood = new Dictionary<string, string[]>();
         public static string GenreFoodPath;
+        public static Dictionary<string, string[]> GenreHealthyFood = new Dictionary<string, string[]>();
+        public static string GenreHealthyFoodPath;
         public static Random r = new Random();
         public static WebClient wc = new WebClient();
         public static Video Snack(User user)
@@ -112,6 +114,11 @@ namespace Freetime_Planner
             {
                 var pair = line.Split("*");
                 GenreFood[pair[0]] = pair[1].Split(",").Select(g => g.Trim()).ToArray();
+            }
+            foreach (var line in File.ReadLines(GenreHealthyFoodPath))
+            {
+                var pair = line.Split("*");
+                GenreHealthyFood[pair[0]] = pair[1].Split(",").Select(g => g.Trim()).ToArray();
             }
         }
 
