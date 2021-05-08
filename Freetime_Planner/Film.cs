@@ -34,7 +34,8 @@ namespace Freetime_Planner
         public static Dictionary<int, FilmObject> PopularFilms { get; set; }
         public static string PopularFilmsPath;
         public static DateTime LastPopularFilmsUpdate { get; set; }
-
+        public static Queue<Mailing.MailObject> PopularFilmsQueue { get; set; }
+        public static string PopularFilmsQueuePath;
         /// <summary>
         /// Загружает список популярных фильмов из json-файла в поле PopularFilms. Если такого json-файла нет, то создает и выгружает список
         /// </summary>
@@ -54,7 +55,7 @@ namespace Freetime_Planner
                     LastPopularFilmsUpdate = pair.Key;
                     PopularFilms = pair.Value;
                 }
-                catch (Exception e)
+                catch (Exception )
                 {
                     UpdatePopularFilms();
                     LastPopularFilmsUpdate = DateTime.Now;
@@ -62,12 +63,33 @@ namespace Freetime_Planner
                 }
             }
         }
-
+        public static void UploadPopularFilmsQueue()
+        {
+            if (!File.Exists(PopularFilmsQueuePath))
+            {
+                UpdatePopularFilmsQueue();
+                UnloadPopularFilmsQueue();
+                return;
+            }
+            else
+            {
+                try
+                {
+                    PopularFilmsQueue = JsonConvert.DeserializeObject<Queue<Mailing.MailObject>>(File.ReadAllText(PopularFilmsQueuePath));
+                }
+                catch (Exception)
+                {
+                    UpdatePopularFilmsQueue();
+                    UnloadPopularFilmsQueue();
+                }
+            }
+        }
         /// <summary>
         /// Выгружает список популярных фильмов из PopularFilms в json-файл
         /// </summary>
         public static void UnloadPopularFilms() => File.WriteAllText(PopularFilmsPath, JsonConvert.SerializeObject(new KeyValuePair<DateTime, Dictionary<int, FilmObject>>(LastPopularFilmsUpdate, PopularFilms)));
 
+        public static void UnloadPopularFilmsQueue() => File.WriteAllText(PopularFilmsQueuePath, JsonConvert.SerializeObject(PopularFilmsQueue));
         /// <summary>
         /// Обновляет список популярных фильмов
         /// </summary>
@@ -151,6 +173,27 @@ namespace Freetime_Planner
                 }
             }
             PopularFilms = res;
+
+        }
+        public static void UpdatePopularFilmsQueue()
+        {
+            var q = new Queue<Mailing.MailObject>();
+            foreach (var film in PopularFilms.Values)
+            {
+                var m = new Mailing.MailObject();
+                string date = film.data.premiereRu ?? film.data.premiereWorld;
+                if (DateTime.Now.CompareTo(User.StringToDate(date)) <= 0)
+                {
+                    m.createTrailer(film.data.filmId.ToString(), film.data.nameRu, film.data.nameEn, film.data.year);
+                    q.Enqueue(m);
+                }
+                else
+                {
+                    m.createPostersFacts(film);
+                    q.Enqueue(m);
+                }
+            }
+            PopularFilmsQueue = q;
         }
         #endregion
 
@@ -428,20 +471,20 @@ namespace Freetime_Planner
                 string ActorInfoObj ="";
                 if(ActInf.hasAwards == 1)
                     ActorInfoObj = "🏆";
-                if (ActInf.nameRu == null)
+                if (ActInf.nameRu == null || ActInf.nameRu == string.Empty)
                     ActorInfoObj += ActInf.nameEn + "\n";
-                else
-                if (ActInf.nameEn == null)
-                    ActorInfoObj += ActInf.nameRu + "\n";
-                else
-                if(ActInf.nameRu != null && ActInf.nameEn != null)
-                    ActorInfoObj += ActInf.nameRu + "/" + ActInf.nameEn + "\n\n" ;
+                else if (ActInf.nameEn == null || ActInf.nameEn == string.Empty)
+                      ActorInfoObj += ActInf.nameRu + "\n";
+                
+                else if(ActInf.nameRu != null && ActInf.nameEn != null && ActInf.nameRu!= string.Empty && ActInf.nameEn!= string.Empty)
+                      ActorInfoObj += ActInf.nameRu + "/" + ActInf.nameEn + "\n\n" ;
+                
                 if (ActInf.growth != null && ActInf.growth!="0")
                     ActorInfoObj += "🕺Рост: " + ActInf.growth + "\n";
                 if (ActInf.birthday != null && ActInf.birthday != string.Empty)
                     ActorInfoObj += "👶День рождения: " + Film.Methods.ChangeDateType(ActInf.birthday) + "\n";
-                if (ActInf.death != null)
-                    ActorInfoObj += "💀Дата смерти: " + ActInf.death;
+                if (ActInf.death != null && ActInf.death !=string.Empty)
+                    ActorInfoObj += "💀Дата смерти: " + Film.Methods.ChangeDateType(ActInf.death) +"\n";
                 if (ActInf.age != 0) 
                     ActorInfoObj += "⏰Возраст: " + ActInf.age + "\n\n";
                 if (ActInf.facts != null && ActInf.facts.Count != 0)
@@ -496,9 +539,9 @@ namespace Freetime_Planner
                 try { film = JsonConvert.DeserializeObject<FilmObject>(response.Content); }
                 catch (Exception) { keyboard = null; attachments = null; return "При загрузке информации о фильме что-то произошло... 😔 Попробуй повторно выполнить запрос"; }
                 if (film.data.nameEn != null)
-                    user.AddFilmSoundtrackAsync(film.data.nameEn, "ost");
+                    user.AddFilmSoundtrackAsync(film.data.nameEn, film.data.premiereWorld.Substring(0, 4));
                 else
-                    user.AddFilmSoundtrackAsync(film.data.nameRu, "саундтрек");
+                    user.AddFilmSoundtrackAsync(film.data.nameRu, film.data.premiereWorld.Substring(0, 4));
                 attachments = new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()) };
                 keyboard = Keyboards.FilmSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), film.data.premiereRu ?? film.data.premiereWorld ?? film.data.year, string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereDigital ?? film.data.premiereDvd);
                 return FullInfo(film);
@@ -695,7 +738,9 @@ namespace Freetime_Planner
                 string[] song_names;
                 try
                 {
-                    song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{filmName} {addition}"), count.ToString()).ToArray();
+                    //song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{filmName} {addition}"), count.ToString()).ToArray();
+                    var tracks = yandex_api.GetAlbum(yandex_api.SearchAlbums($"{filmName} {addition}")[0].Id).Volumes[0];
+                    song_names = tracks.Take(Math.Min(count, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
                     for (int i = 0; i < song_names.Length; ++i)
                     {
                         var collection = Bot.private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
@@ -763,7 +808,7 @@ namespace Freetime_Planner
             /// </summary>
             /// <param name="genres"></param>
             /// <returns></returns>
-            public static Video Food(string[] genres)
+            public static Video Food(string[] genres, User user)
             {
                 Random r = new Random();
                 WebClient wc = new WebClient();
@@ -771,8 +816,15 @@ namespace Freetime_Planner
                 var request = new RestRequest(Method.GET);
                 request.AddQueryParameter("key", Bot._youtube_key);
                 request.AddQueryParameter("part", "snippet");
-                var meal = Freetime_Planner.Food.GenreFood[genres[r.Next(0, genres.Length)]];
-                request.AddQueryParameter("q", meal[r.Next(0, meal.Length)]);
+                string[] meal;
+                if (user.OnlyHealthyFood)
+                    meal = Freetime_Planner.Food.GenreHealthyFood[genres[r.Next(0, genres.Length)]];
+                else
+                    meal = Freetime_Planner.Food.GenreFood[genres[r.Next(0, genres.Length)]];
+                int ind;
+                do { ind = r.Next(0, meal.Length); } while (meal[ind] == user.LastGenreFood);
+                user.LastGenreFood = meal[ind];
+                request.AddQueryParameter("q", meal[ind]);
                 request.AddQueryParameter("videoDuration", "short");
                 request.AddQueryParameter("type", "video");
                 IRestResponse response = client.Execute(request);

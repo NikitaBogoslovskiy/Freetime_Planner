@@ -1034,6 +1034,8 @@ namespace Freetime_Planner
 
             button.AddButton("Частота рассылки", "Command", Primary, "text");
             button.AddLine();
+            button.AddButton("Режим диеты", "Command", Primary, "text");
+            button.AddLine();
             button.AddButton("Помощь", "Command", Positive, "text");
             button.AddButton("Назад", "Command", Negative, "text");
 
@@ -1054,6 +1056,20 @@ namespace Freetime_Planner
             button.AddButton("Раз в неделю", $"o;;;;;;", Default, "text");
             button.AddLine();
             button.AddButton("Без рассылки", $"o;;;;;;", Default, "text");
+
+            button.SetInline();
+            return button.Build();
+        }
+
+        public static MessageKeyboard DietMode()
+        {
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            button.Clear();
+
+            button.AddButton("Без ограничений", $"o;;;;;;", Default, "text");
+            button.AddLine();
+            button.AddButton("Здоровое питание", $"o;;;;;;", Default, "text");
+            button.AddLine();
 
             button.SetInline();
             return button.Build();

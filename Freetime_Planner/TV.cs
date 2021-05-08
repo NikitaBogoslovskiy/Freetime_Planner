@@ -346,20 +346,20 @@ namespace Freetime_Planner
                 string ActorInfoObj = "";
                 if (ActInf.hasAwards == 1)
                     ActorInfoObj = "🏆";
-                if (ActInf.nameRu == null)
+                if (ActInf.nameRu == null || ActInf.nameRu == string.Empty)
                     ActorInfoObj += ActInf.nameEn + "\n";
-                else
-                if (ActInf.nameEn == null)
+                else if (ActInf.nameEn == null || ActInf.nameEn == string.Empty)
                     ActorInfoObj += ActInf.nameRu + "\n";
-                else
-                if (ActInf.nameRu != null && ActInf.nameEn != null)
+
+                else if (ActInf.nameRu != null && ActInf.nameEn != null && ActInf.nameRu != string.Empty && ActInf.nameEn != string.Empty)
                     ActorInfoObj += ActInf.nameRu + "/" + ActInf.nameEn + "\n\n";
+
                 if (ActInf.growth != null && ActInf.growth != "0")
                     ActorInfoObj += "🕺Рост: " + ActInf.growth + "\n";
                 if (ActInf.birthday != null && ActInf.birthday != string.Empty)
                     ActorInfoObj += "👶День рождения: " + Film.Methods.ChangeDateType(ActInf.birthday) + "\n";
-                if (ActInf.death != null)
-                    ActorInfoObj += "💀Дата смерти: " + ActInf.death;
+                if (ActInf.death != null && ActInf.death !=string.Empty)
+                    ActorInfoObj += "💀Дата смерти: " + Film.Methods.ChangeDateType(ActInf.death) + "\n";
                 if (ActInf.age != 0)
                     ActorInfoObj += "⏰Возраст: " + ActInf.age + "\n\n";
                 if (ActInf.facts != null && ActInf.facts.Count != 0)
@@ -409,9 +409,9 @@ namespace Freetime_Planner
                 try { film = JsonConvert.DeserializeObject<TVObject>(response.Content); }
                 catch(Exception) { keyboard = null; attachments = null; return "При загрузке информации о сериале что-то произошло... 😔 Попробуй повторно выполнить запрос"; }
                 if (film.data.nameEn != null)
-                    user.AddTVSoundtrackAsync(film.data.nameEn, "ost");
+                    user.AddTVSoundtrackAsync(film.data.nameEn, "series");
                 else
-                    user.AddTVSoundtrackAsync(film.data.nameRu, "саундтрек");
+                    user.AddTVSoundtrackAsync(film.data.nameRu, "сериал");
                 attachments = new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()) };
                 keyboard = Keyboards.TVSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereRu);
                 return FullInfo(film);
@@ -535,7 +535,9 @@ namespace Freetime_Planner
                 string[] song_names;
                 try
                 {
-                    song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{TVName} {addition}"), count.ToString()).ToArray();
+                    //song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{TVName} {addition}"), count.ToString()).ToArray();
+                    var tracks = yandex_api.GetAlbum(yandex_api.SearchAlbums($"{TVName} {addition}")[0].Id).Volumes[0];
+                    song_names = tracks.Take(Math.Min(count, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
                     for (int i = 0; i < song_names.Length; ++i)
                     {
                         var collection = private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
@@ -556,7 +558,7 @@ namespace Freetime_Planner
                 }
             }
 
-            public static Video Food(string[] genres)
+            public static Video Food(string[] genres, User user)
             {
                 Random r = new Random();
                 WebClient wc = new WebClient();
@@ -564,8 +566,15 @@ namespace Freetime_Planner
                 var request = new RestRequest(Method.GET);
                 request.AddQueryParameter("key", Bot._youtube_key);
                 request.AddQueryParameter("part", "snippet");
-                var meal = Freetime_Planner.Food.GenreFood[genres[r.Next(0, genres.Length)]];
-                request.AddQueryParameter("q", meal[r.Next(0, meal.Length)]);
+                string[] meal;
+                if (user.OnlyHealthyFood)
+                    meal = Freetime_Planner.Food.GenreHealthyFood[genres[r.Next(0, genres.Length)]];
+                else
+                    meal = Freetime_Planner.Food.GenreFood[genres[r.Next(0, genres.Length)]];
+                int ind;
+                do { ind = r.Next(0, meal.Length); } while (meal[ind] == user.LastGenreFood);
+                user.LastGenreFood = meal[ind];
+                request.AddQueryParameter("q", meal[ind]);
                 request.AddQueryParameter("videoDuration", "short");
                 request.AddQueryParameter("type", "video");
                 IRestResponse response = client.Execute(request);
