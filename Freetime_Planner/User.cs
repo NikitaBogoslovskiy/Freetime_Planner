@@ -117,7 +117,6 @@ namespace Freetime_Planner
                 ["Dessert"] = "",
                 ["Snack"] = ""
             };
-            OnlyHealthyFood = false;
         }
 
         /// <summary>
@@ -494,16 +493,7 @@ namespace Freetime_Planner
                 request.AddHeader("X-API-KEY", Bot._kp_key);
                 request.AddQueryParameter("type", "FILM");
                 request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
-                int opt = random.Next(0, 2);
-                if (opt == 0)
-                    request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
-                else
-                {
-                    int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 10);
-                    int filmYearUpperLine = random.Next(filmYearBottomLine + 10, DateTime.Now.Year+1);
-                    request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
-                    request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
-                }
+                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
                 IRestResponse response = client.Execute(request);
                 RandomFilms.Results results;
                 try { results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content); }
@@ -536,9 +526,7 @@ namespace Freetime_Planner
             var res = new FilmSountracks();
             try
             {
-                //song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
-                var tracks = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{name} {addition}")[0].Id).Volumes[0];
-                song_names = tracks.Take(Math.Min(6, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
+                song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
                 var audios = new List<Audio>();
                 for (int i = 0; i < song_names.Length; ++i)
                 {
@@ -554,8 +542,6 @@ namespace Freetime_Planner
                 }
                 res.Update(audios);
                 FilmTracks[name] = res;
-                if (res.Tracks.Count == 0)
-                    FilmTracks[name].IsEmpty = true;
                 Users.Unload();
             }
             catch (Exception)
@@ -793,22 +779,15 @@ namespace Freetime_Planner
             {
                 var dict = new Dictionary<int, RandomTV.Film>();
                 Random random = new Random();
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
                 string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
                 var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
                 var request = new RestRequest(Method.GET);
                 request.AddHeader("X-API-KEY", Bot._kp_key);
                 request.AddQueryParameter("type", "TV_SHOW");
                 request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
-                int opt = random.Next(0, 2);
-                if (opt == 0)
-                    request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
-                else
-                {
-                    int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 10);
-                    int filmYearUpperLine = random.Next(filmYearBottomLine + 10, DateTime.Now.Year + 1);
-                    request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
-                    request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
-                }
+                request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
                 IRestResponse response = client.Execute(request);
                 RandomTV.Results results;
                 try { results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content); }
@@ -841,9 +820,7 @@ namespace Freetime_Planner
             var res = new FilmSountracks();
             try
             {
-                //song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
-                var tracks = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{name} {addition}")[0].Id).Volumes[0];
-                song_names = tracks.Take(Math.Min(6, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
+                song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
                 var audios = new List<Audio>();
                 for (int i = 0; i < song_names.Length; ++i)
                 {
@@ -859,8 +836,6 @@ namespace Freetime_Planner
                 }
                 res.Update(audios);
                 TVTracks[name] = res;
-                if (res.Tracks.Count == 0)
-                    TVTracks[name].IsEmpty = true;
                 Users.Unload();
             }
             catch (Exception)

@@ -43,13 +43,11 @@ namespace Freetime_Planner
             Bot._spotify_client_secret = token_object._spotify_client_secret;
             Users.users_path = Bot.directory + "/Users_Dict.json";
             Film.PopularFilmsPath = Bot.directory + "/PopularFilms.json";
-            Film.PopularFilmsQueuePath = Bot.directory + "/PopularFilmsQueue.json";
             Film.RandomFilmsPath = Bot.directory + "/RandomFilms.json";
             TV.PopularTVPath = Bot.directory + "/PopularTV.json";
             TV.RandomTVPath = Bot.directory + "/RandomTV.json";
             ServiceClass.service_path = Bot.directory + "/ServiceData.json";
             Food.GenreFoodPath = Bot.directory + "/GenreFood.txt";
-            Food.GenreHealthyFoodPath = Bot.directory + "/GenreHealthyFood.txt";
             Attachments.DefaultPosterPath = Bot.directory + "/DefaultPoster.jpg";
             Bot.MainHelp = File.ReadAllText(Bot.directory + "/MainHelp.txt");
             Bot.FilmHelp = File.ReadAllText(Bot.directory + "/FilmHelp.txt");

@@ -282,6 +282,33 @@ namespace Freetime_Planner
 
         #endregion
 
+        public static string ActorPosterID(ActorResults.Actor actor)
+        {
+            try
+            {
+                string path = String.Format(Bot.directory + "/tv_{0}_{1}.jpg", actor.staffId, Guid.NewGuid());
+                WebClient wc = new WebClient();
+                wc.DownloadFile(actor.posterUrl, path);
+                if (!CropAndOverwrite(path))
+                    return null;
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_actors, Bot.group_id);
+                var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
+                var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                {
+                    SaveFileResponse = responseFile,
+                    AlbumId = Bot.album_id_actors,
+                    GroupId = Bot.group_id
+                }).First();
+                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                File.Delete(path);
+                return vkid;
+            }
+            catch (Exception e)
+            {
+                WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
+                return null;
+            }
+        }
 
         public static Photo PosterObject(User user, string url, string filmID)
         {
@@ -303,34 +330,6 @@ namespace Freetime_Planner
                 var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, DefaultPosterPath));
                 var photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
                 return photo;
-            }
-        }
-
-        public static string PosterObject(string url, string filmID)
-        {
-            try
-            {
-                string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", filmID, Guid.NewGuid());
-                WebClient wc = new WebClient();
-                wc.DownloadFile(url, path);
-                if (!SizeIsWell(path))
-                    return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular, Bot.group_id);
-                var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
-                var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
-                {
-                    SaveFileResponse = responseFile,
-                    AlbumId = Bot.album_id_popular,
-                    GroupId = Bot.group_id
-                }).First();
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
-                File.Delete(path);
-                return vkid;
-            }
-            catch (Exception e)
-            {
-                WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
-                return null;
             }
         }
 
