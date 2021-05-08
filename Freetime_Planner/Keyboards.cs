@@ -121,13 +121,17 @@ namespace Freetime_Planner
             button.AddLine();
             if (ServiceClass.service_data.google_requests < 100 && digital_release != null && DateTime.Now.CompareTo(User.StringToDate(digital_release)) >= 0)
             {
-                button.AddButton("Где посмотреть", $"f;{nameRu};;;{date};;{digital_release}", Primary, "text");
-                button.AddLine();
+                button.AddButton("Смотреть", $"f;{nameRu};;;{date};;{digital_release}", Primary, "text");
+                
             }
+            button.AddButton("Актеры", $"f;;;{filmID};;;", Primary, "text");
+            button.AddLine();
             button.AddButton("Саундтрек", $"f;{nameRu};{nameEn};;{date};;", Primary, "text");
-            button.AddButton("Еда", $"f;;;;;{genres};", Primary, "text");
+            button.AddButton("Еда", $"f;;;;;{genres};", Primary, "text"); 
             button.AddLine();
             button.AddButton("Не показывать", $"f;;;{filmID};;;", Negative, "text");
+
+            
 
             button.SetInline();
             return button.Build();
@@ -394,6 +398,98 @@ namespace Freetime_Planner
             }
         }*/
 
+        /// <summary>
+        /// Возвращает актеров в виде карусели
+        /// </summary>
+        /// <param name="results"></param>
+        /// <returns></returns>
+        public static MessageTemplate ActorResults(IEnumerable<ActorResults.Actor> results)
+        {
+            var carousel = new MessageTemplate();
+            carousel.Type = Carousel;
+            var arr = new List<CarouselElement>();
+            Parallel.ForEach(results, (actor) =>
+            {
+                CarouselElement template_part = null;
+                if (CarouselActors(actor, ref template_part))
+                    arr.Add(template_part);
+            });
+            carousel.Elements = arr;
+
+            return carousel;
+        }
+        //------------------"Carusel Actors -----------------------------------------------
+        public static bool CarouselActors(ActorResults.Actor actor, ref CarouselElement template_part)
+        {
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            button.AddButton("Узнать больше", $"f;;;{actor.staffId};;;", Positive, "text");
+            var element = new CarouselElement();
+            if (actor.nameRu != null && actor.nameRu != string.Empty)
+                element.Title = actor.nameRu;
+            else if (actor.nameEn != null && actor.nameEn != string.Empty)
+                element.Title = actor.nameEn;
+            else return false;
+            if (actor.description == null || actor.description == string.Empty)
+                element.Description = "Безымянный";
+            else
+                element.Description = actor.description;
+            element.Buttons = button.Build().Buttons.First();
+            element.PhotoId = Attachments.ActorPosterID(actor);
+            if (element.PhotoId == null)
+                return false;
+            else
+            {
+                template_part = element;
+                return true;
+            }
+            
+
+        }
+
+        public static MessageTemplate ActorResultsTV(IEnumerable<ActorResults.Actor> results)
+        {
+            var carousel = new MessageTemplate();
+            carousel.Type = Carousel;
+            var arr = new List<CarouselElement>();
+            Parallel.ForEach(results, (actor) =>
+            {
+                CarouselElement template_part = null;
+                if (CarouselActorsTV(actor, ref template_part))
+                    arr.Add(template_part);
+            });
+            carousel.Elements = arr;
+
+            return carousel;
+        }
+        public static bool CarouselActorsTV(ActorResults.Actor actor, ref CarouselElement template_part)
+        {
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            button.AddButton("Узнать больше", $"t;;;{actor.staffId};;;", Positive, "text");
+            var element = new CarouselElement();
+            if (actor.nameRu != null && actor.nameRu != string.Empty)
+                element.Title = actor.nameRu;
+            else if (actor.nameEn != null && actor.nameEn != string.Empty)
+                element.Title = actor.nameEn;
+            else return false;
+            if (actor.description == null || actor.description == string.Empty)
+                element.Description = "Безымянный";
+            else
+                element.Description = actor.description;
+            element.Buttons = button.Build().Buttons.First();
+            element.PhotoId = Attachments.ActorPosterID(actor);
+            if (element.PhotoId == null)
+                return false;
+            else
+            {
+                template_part = element;
+                return true;
+            }
+
+
+        }
+
+
+        //------------------"Carousel Film -----------------------------------------------
         public static CarouselElement CarouselFilm(RandomFilms.Film film)
         {
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
@@ -566,9 +662,11 @@ namespace Freetime_Planner
             button.AddLine();
             if (ServiceClass.service_data.google_requests < 100 && date != null && DateTime.Now.CompareTo(User.StringToDate(date)) >= 0)
             {
-                button.AddButton("Где посмотреть", $"t;{nameRu};;;{date};;", Primary, "text");
-                button.AddLine();
+                button.AddButton("Смотреть", $"t;{nameRu};;;{date};;", Primary, "text");
+                
             }
+            button.AddButton("Актеры", $"t;;;{filmID};;;", Primary, "text");
+            button.AddLine();
             button.AddButton("Саундтрек", $"t;{nameRu};{nameEn};;;;", Primary, "text");
             button.AddButton("Еда", $"t;;;;;{genres};", Primary, "text");
             button.AddLine();
@@ -936,8 +1034,6 @@ namespace Freetime_Planner
 
             button.AddButton("Частота рассылки", "Command", Primary, "text");
             button.AddLine();
-            button.AddButton("Режим диеты", "Command", Primary, "text");
-            button.AddLine();
             button.AddButton("Помощь", "Command", Positive, "text");
             button.AddButton("Назад", "Command", Negative, "text");
 
@@ -958,19 +1054,6 @@ namespace Freetime_Planner
             button.AddButton("Раз в неделю", $"o;;;;;;", Default, "text");
             button.AddLine();
             button.AddButton("Без рассылки", $"o;;;;;;", Default, "text");
-
-            button.SetInline();
-            return button.Build();
-        }
-        public static MessageKeyboard DietMode()
-        {
-            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
-            button.Clear();
-
-            button.AddButton("Без ограничений", $"o;;;;;;", Default, "text");
-            button.AddLine();
-            button.AddButton("Здоровое питание", $"o;;;;;;", Default, "text");
-            button.AddLine();
 
             button.SetInline();
             return button.Build();

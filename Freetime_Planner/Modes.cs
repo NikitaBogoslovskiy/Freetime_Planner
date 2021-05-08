@@ -9,8 +9,8 @@ namespace Freetime_Planner
         public enum Mode
         {
             Default, Film, TV, Food, Search, Recommendations, PlanToWatch, Random, Dessert,
-            Snack, Cocktails, WantToWatch, Watched, Soundtrack, GenreFood, BlackList, More, AlreadyWatched, Yes, No, Back, Help, WhereToWatch, Options,
-            MailFrequency, Everyday, ThreeDays, FiveDays, EveryWeek, NoMail, DietMode, NoLimit, HealthyFood
+            Snack, Cocktails, WantToWatch, Watched, Soundtrack,Actors, GenreFood, BlackList, More, AlreadyWatched, Yes, No, Back, Help, WhereToWatch, Options,
+            MailFrequency, Everyday, ThreeDays, FiveDays, EveryWeek, NoMail, MoreAboutActor
         }
 
         /// <summary>
@@ -51,6 +51,8 @@ namespace Freetime_Planner
                 case "Хочу посмотреть": return Mode.WantToWatch;
                 case "Посмотрел": return Mode.Watched;
                 case "Саундтрек": return Mode.Soundtrack;
+                case "Актеры": return Mode.Actors;
+                case "Узнать больше": return Mode.MoreAboutActor;
                 case "Еда": return Mode.GenreFood;
                 case "Не показывать": return Mode.BlackList;
                 case "Подробнее": return Mode.More;
@@ -59,16 +61,13 @@ namespace Freetime_Planner
                 case "Нет": return Mode.No;
                 case "Помощь": return Mode.Help;
                 case "Назад": return Mode.Back;
-                case "Где посмотреть": return Mode.WhereToWatch;
+                case "Смотреть": return Mode.WhereToWatch;
                 case "Частота рассылки": return Mode.MailFrequency;
                 case "Ежедневно": return Mode.Everyday;
                 case "Раз в три дня": return Mode.ThreeDays;
                 case "Раз в пять дней": return Mode.FiveDays;
                 case "Раз в неделю": return Mode.EveryWeek;
                 case "Без рассылки": return Mode.NoMail;
-                case "Режим диеты": return Mode.DietMode;
-                case "Без ограничений": return Mode.NoLimit;
-                case "Здоровое питание": return Mode.HealthyFood;
                 default: throw new ArgumentException("Нажимай кнопки в меню");
             }
         }

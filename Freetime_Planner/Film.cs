@@ -32,9 +32,7 @@ namespace Freetime_Planner
         //Популярные фильмы
         #region PopularFilms
         public static Dictionary<int, FilmObject> PopularFilms { get; set; }
-        public static Queue<Mailing.MailObject> PopularFilmsQueue { get; set; }
         public static string PopularFilmsPath;
-        public static string PopularFilmsQueuePath;
         public static DateTime LastPopularFilmsUpdate { get; set; }
 
         /// <summary>
@@ -56,7 +54,7 @@ namespace Freetime_Planner
                     LastPopularFilmsUpdate = pair.Key;
                     PopularFilms = pair.Value;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     UpdatePopularFilms();
                     LastPopularFilmsUpdate = DateTime.Now;
@@ -65,33 +63,10 @@ namespace Freetime_Planner
             }
         }
 
-        public static void UploadPopularFilmsQueue()
-        {
-            if (!File.Exists(PopularFilmsQueuePath))
-            {
-                UpdatePopularFilmsQueue();
-                UnloadPopularFilmsQueue();
-                return;
-            }
-            else
-            {
-                try
-                {
-                    PopularFilmsQueue = JsonConvert.DeserializeObject<Queue<Mailing.MailObject>>(File.ReadAllText(PopularFilmsQueuePath));
-                }
-                catch (Exception)
-                {
-                    UpdatePopularFilmsQueue();
-                    UnloadPopularFilmsQueue();
-                }
-            }
-        }
-
         /// <summary>
         /// Выгружает список популярных фильмов из PopularFilms в json-файл
         /// </summary>
         public static void UnloadPopularFilms() => File.WriteAllText(PopularFilmsPath, JsonConvert.SerializeObject(new KeyValuePair<DateTime, Dictionary<int, FilmObject>>(LastPopularFilmsUpdate, PopularFilms)));
-        public static void UnloadPopularFilmsQueue() => File.WriteAllText(PopularFilmsQueuePath, JsonConvert.SerializeObject(PopularFilmsQueue));
 
         /// <summary>
         /// Обновляет список популярных фильмов
@@ -176,27 +151,6 @@ namespace Freetime_Planner
                 }
             }
             PopularFilms = res;
-        }
-
-        public static void UpdatePopularFilmsQueue()
-        {
-            var q = new Queue<Mailing.MailObject>();
-            foreach(var film in PopularFilms.Values)
-            {
-                var m = new Mailing.MailObject();
-                string date = film.data.premiereRu ?? film.data.premiereWorld;
-                if (DateTime.Now.CompareTo(User.StringToDate(date)) <= 0)
-                {
-                    m.createTrailer(film.data.filmId.ToString(), film.data.nameRu, film.data.nameEn, film.data.year);
-                    q.Enqueue(m);
-                }
-                else
-                {
-                    m.createPostersFacts(film);
-                    q.Enqueue(m);
-                }
-            }
-            PopularFilmsQueue = q;
         }
         #endregion
 
@@ -457,6 +411,73 @@ namespace Freetime_Planner
         /// </summary>
         public static class Methods
         {
+            public static MessageTemplate ActorMessage(string filmID)
+            {
+                var proverka = Film.Methods.Actors(filmID);
+                if (proverka != null)
+                    return Keyboards.ActorResults(Film.Methods.Actors(filmID).Take(Math.Min(5,proverka.Count)));
+                else return null;
+            }
+
+
+            public static string ActorDescriptionMessage(User user,string personId, out IEnumerable<MediaAttachment> attachments)
+            {
+
+                var ActInf = Film.Methods.ActorInfo(personId);
+                attachments = new List<MediaAttachment> { Attachments.PosterObject(user, ActInf.posterUrl, personId) };
+                string ActorInfoObj ="";
+                if(ActInf.hasAwards == 1)
+                    ActorInfoObj = "🏆";
+                if (ActInf.nameRu == null)
+                    ActorInfoObj += ActInf.nameEn + "\n";
+                else
+                if (ActInf.nameEn == null)
+                    ActorInfoObj += ActInf.nameRu + "\n";
+                else
+                if(ActInf.nameRu != null && ActInf.nameEn != null)
+                    ActorInfoObj += ActInf.nameRu + "/" + ActInf.nameEn + "\n\n" ;
+                if (ActInf.growth != null && ActInf.growth!="0")
+                    ActorInfoObj += "🕺Рост: " + ActInf.growth + "\n";
+                if (ActInf.birthday != null && ActInf.birthday != string.Empty)
+                    ActorInfoObj += "👶День рождения: " + Film.Methods.ChangeDateType(ActInf.birthday) + "\n";
+                if (ActInf.death != null)
+                    ActorInfoObj += "💀Дата смерти: " + ActInf.death;
+                if (ActInf.age != 0) 
+                    ActorInfoObj += "⏰Возраст: " + ActInf.age + "\n\n";
+                if (ActInf.facts != null && ActInf.facts.Count != 0)
+                    ActorInfoObj += "✨Интересные факты\n" + string.Join("\n",ActInf.facts.Take(Math.Min(3,ActInf.facts.Count)).Select(f => $"✔ {f}")) + "\n";
+                ActorInfoObj += "\n📽Фильмография\n";
+                int i = 0;
+                var l = new List<int>();
+                
+                foreach (var item in ActInf.films)
+                {
+                    if (i == 10)
+                        break;
+
+                    if (l.Contains(item.filmId))
+                        continue;
+                        
+                    if (item.nameRu == null)                        
+                        ActorInfoObj += item.nameEn;
+                    else                        
+                        ActorInfoObj += item.nameRu;
+
+
+                    if (item.rating != null)
+                    { 
+                        var m = Regex.Match(item.rating, @"\b(\d)\.(\d)\b");
+                        if (m.Success && m.Groups[1].Value != "0" && m.Groups[2].Value != "0")
+                             ActorInfoObj += " ⭐" + item.rating;                   
+                    }
+                    ActorInfoObj += "\n";
+                    i++;
+                    l.Add(item.filmId);
+                }
+                 
+
+                    return ActorInfoObj;
+            }
             /// <summary>
             /// Возвращает подробную информацию по ID фильма (отправляет запрос на Кинопоиск)
             /// </summary>
@@ -475,9 +496,9 @@ namespace Freetime_Planner
                 try { film = JsonConvert.DeserializeObject<FilmObject>(response.Content); }
                 catch (Exception) { keyboard = null; attachments = null; return "При загрузке информации о фильме что-то произошло... 😔 Попробуй повторно выполнить запрос"; }
                 if (film.data.nameEn != null)
-                    user.AddFilmSoundtrackAsync(film.data.nameEn, film.data.premiereWorld.Substring(0, 4));
+                    user.AddFilmSoundtrackAsync(film.data.nameEn, "ost");
                 else
-                    user.AddFilmSoundtrackAsync(film.data.nameRu, film.data.premiereWorld.Substring(0, 4));
+                    user.AddFilmSoundtrackAsync(film.data.nameRu, "саундтрек");
                 attachments = new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()) };
                 keyboard = Keyboards.FilmSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), film.data.premiereRu ?? film.data.premiereWorld ?? film.data.year, string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereDigital ?? film.data.premiereDvd);
                 return FullInfo(film);
@@ -674,9 +695,7 @@ namespace Freetime_Planner
                 string[] song_names;
                 try
                 {
-                    //song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{filmName} {addition}"), count.ToString()).ToArray();
-                    var tracks = yandex_api.GetAlbum(yandex_api.SearchAlbums($"{filmName} {addition}")[0].Id).Volumes[0];
-                    song_names = tracks.Take(Math.Min(count, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
+                    song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{filmName} {addition}"), count.ToString()).ToArray();
                     for (int i = 0; i < song_names.Length; ++i)
                     {
                         var collection = Bot.private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
@@ -704,14 +723,18 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static List<ActorResults.Actor> Actors(string filmId)
             {
-                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v1/staff");
+                var client = new RestClient($"https://kinopoiskapiunofficial.tech/api/v1/staff?filmId={ filmId }");
                 var request = new RestRequest(Method.GET);
                 request.AddHeader("X-API-KEY", Bot._kp_key);
-                request.AddQueryParameter("filmId", filmId);
-
+                request.AddHeader("accept", "application/json");
+                //request.AddQueryParameter("filmId", filmId);
+                
                 IRestResponse response = client.Execute(request);
-
-                var result = JsonConvert.DeserializeObject<List<ActorResults.Actor>>(response.Content).Where(x => x.professionKey == "ACTOR").ToList();
+                List<ActorResults.Actor> result = null;
+                try { result =  JsonConvert.DeserializeObject<List<ActorResults.Actor>>(response.Content).Where(x => x.professionKey == "ACTOR").ToList();}
+                catch (Exception){ result =  null; }
+                if (result == null || result.Count == 0)
+                    return null;
 
                 return result;
             }
@@ -740,7 +763,7 @@ namespace Freetime_Planner
             /// </summary>
             /// <param name="genres"></param>
             /// <returns></returns>
-            public static Video Food(string[] genres, User user)
+            public static Video Food(string[] genres)
             {
                 Random r = new Random();
                 WebClient wc = new WebClient();
@@ -748,15 +771,8 @@ namespace Freetime_Planner
                 var request = new RestRequest(Method.GET);
                 request.AddQueryParameter("key", Bot._youtube_key);
                 request.AddQueryParameter("part", "snippet");
-                string[] meal;
-                if (user.OnlyHealthyFood)
-                    meal = Freetime_Planner.Food.GenreHealthyFood[genres[r.Next(0, genres.Length)]];
-                else
-                    meal = Freetime_Planner.Food.GenreFood[genres[r.Next(0, genres.Length)]];
-                int ind;
-                do { ind = r.Next(0, meal.Length); } while (meal[ind] == user.LastGenreFood);
-                user.LastGenreFood = meal[ind];
-                request.AddQueryParameter("q", meal[ind]);
+                var meal = Freetime_Planner.Food.GenreFood[genres[r.Next(0, genres.Length)]];
+                request.AddQueryParameter("q", meal[r.Next(0, meal.Length)]);
                 request.AddQueryParameter("videoDuration", "short");
                 request.AddQueryParameter("type", "video");
                 IRestResponse response = client.Execute(request);
@@ -912,9 +928,12 @@ namespace Freetime_Planner
 
     //Класс, необходимый для десериализации ответа с Кинопоиска при поиске актера
     #region Actor
+    
 
     public static class ActorResults
     {
+
+        
         public class Actor
         {
             public int staffId { get; set; }
@@ -923,6 +942,7 @@ namespace Freetime_Planner
             public string posterUrl { get; set; }
             public string professionText { get; set; }
             public string professionKey { get; set; }
+            public string description { get; set; }
         }
 
         public class ActorFullInfo
