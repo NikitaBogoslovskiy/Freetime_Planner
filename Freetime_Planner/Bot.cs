@@ -464,6 +464,7 @@ namespace Freetime_Planner
                 VkNet.Model.User Sender = vkapi_main.Users.Get(new long[] { message.PeerId.Value }, ProfileFields.Online)[0];
                 bool b = info.InlineKeyboard;
                 bool? IsMobileVersion = b;
+               // bool? IsMobileVersion = false;
                 var user = Users.GetUser(Sender, out bool IsOld);
                 if (message.Attachments.Count != 0)
                 {
@@ -1288,7 +1289,7 @@ namespace Freetime_Planner
                                     }
                                     else
                                     {
-                                        TV.Methods.Random_inMessage(user); //отправка сообщения внутри
+                                        user.RandomTVMessage(user); //отправка сообщения внутри
                                         //keyboard = null;
                                         //attachments = null;
                                     }
