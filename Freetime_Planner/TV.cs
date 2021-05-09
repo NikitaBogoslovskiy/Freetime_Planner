@@ -411,13 +411,13 @@ namespace Freetime_Planner
 
         public static class Methods
         {
-            public static MessageTemplate ActorMessage(string filmID)
+            /*public static MessageTemplate ActorMessage(string filmID)
             {
                 var proverka = Film.Methods.Actors(filmID);
                 if (proverka != null)
                     return Keyboards.ActorResultsTV(proverka.Take(Math.Min(5, proverka.Count)));
                 else return null;
-            }
+            }*/
 
 
             public static string ActorDescriptionMessageTV(User user, string personId, out IEnumerable<MediaAttachment> attachments)
@@ -666,7 +666,8 @@ namespace Freetime_Planner
 
                 var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
                 {
-                    Link = $"https://www.youtube.com/watch?v={results.items[r.Next(0, 5)].id.videoId}"
+                    Link = $"https://www.youtube.com/watch?v={results.items[r.Next(0, 5)].id.videoId}",
+                    Name = "Приятного аппетита!"
                 });
                 wc.DownloadString(video.UploadUrl);
                 return video;

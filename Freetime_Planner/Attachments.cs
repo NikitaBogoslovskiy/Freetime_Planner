@@ -9,6 +9,7 @@ using VkNet.Model.Attachments;
 using System.Drawing;
 using System.Drawing.Imaging;
 using static System.Console;
+using VkNet.Model.Template;
 
 namespace Freetime_Planner
 {
@@ -660,6 +661,27 @@ namespace Freetime_Planner
             Tracks = _tracks;
             DownloadTime = DateTime.Now;
             IsEmpty = false;
+            IsLoading = false;
+        }
+    }
+
+    public class ActorsTemplate
+    {
+        public MessageTemplate Actors { get; set; }
+        public DateTime DownloadTime { get; set; }
+        public bool IsEmpty { get; set; }
+        public bool IsLoading { get; set; }
+        public ActorsTemplate()
+        {
+            DownloadTime = DateTime.Now;
+            IsEmpty = true;
+            IsLoading = true;
+        }
+        public void Update(MessageTemplate _actors)
+        {
+            Actors = _actors;
+            DownloadTime = DateTime.Now;
+            IsEmpty = _actors.Elements.Count() == 0;
             IsLoading = false;
         }
     }

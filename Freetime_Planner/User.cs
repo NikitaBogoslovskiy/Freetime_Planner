@@ -79,6 +79,8 @@ namespace Freetime_Planner
         public string LastGenreFood { get; set; }
         public bool OnlyHealthyFood { get; set; }
         public Dictionary<string, List<RandomFilms.Film>> GenreFilms { get; set; }
+        public Dictionary<string, ActorsTemplate> FilmActors { get; set; }
+        public Dictionary<string, ActorsTemplate> TVActors { get; set; }
 
         /// <summary>
         /// Конструктор пользователя
@@ -112,6 +114,8 @@ namespace Freetime_Planner
             RandomTVIsUpdating = false;
             FilmTracks = new Dictionary<string, FilmSountracks>();
             TVTracks = new Dictionary<string, FilmSountracks>();
+            FilmActors = new Dictionary<string, ActorsTemplate>();
+            TVActors = new Dictionary<string, ActorsTemplate>();
             LastFood = new Dictionary<string, string>
             {
                 ["Cocktail"] = "",
@@ -363,6 +367,21 @@ namespace Freetime_Planner
             else
             {
                 audios = obj.Tracks;
+                return true;
+            }
+        }
+
+        public bool GetFilmActors(string filmID, ref MessageTemplate actors)
+        {
+            if (!FilmActors.ContainsKey(filmID))
+                AddFilmActors(filmID);
+            var obj = FilmActors[filmID];
+            while (obj.IsLoading) { }
+            if (obj.IsEmpty)
+                return false;
+            else
+            {
+                actors = obj.Actors;
                 return true;
             }
         }
@@ -630,7 +649,28 @@ namespace Freetime_Planner
             }
         }
 
-            //--------------Пользовательские методы для сериалов--------------
+        public async void AddFilmActorsAsync(string filmID)
+        {
+            await Task.Run(() => AddFilmActors(filmID));
+        }
+
+        public void AddFilmActors(string filmID)
+        {
+            var proverka = Film.Methods.Actors(filmID);
+            var res = new ActorsTemplate();
+            if (proverka != null)
+            {
+                res.Update(Keyboards.ActorResults(proverka.Take(Math.Min(5, proverka.Count))));
+                FilmActors[filmID] = res;
+            }
+            else
+            {
+                FilmActors[filmID] = res;
+                FilmActors[filmID].IsLoading = false;
+            }
+        }
+
+        //--------------Пользовательские методы для сериалов--------------
 
         public MessageTemplate GetTVRecommendations()
         {
@@ -724,6 +764,21 @@ namespace Freetime_Planner
             else
             {
                 audios = obj.Tracks;
+                return true;
+            }
+        }
+
+        public bool GetTVActors(string TVID, ref MessageTemplate actors)
+        {
+            if (!TVActors.ContainsKey(TVID))
+                AddTVActors(TVID);
+            var obj = TVActors[TVID];
+            while (obj.IsLoading) { }
+            if (obj.IsEmpty)
+                return false;
+            else
+            {
+                actors = obj.Actors;
                 return true;
             }
         }
@@ -948,6 +1003,27 @@ namespace Freetime_Planner
                 TVTracks[name] = res;
                 TVTracks[name].IsLoading = false;
                 return;
+            }
+        }
+
+        public async void AddTVActorsAsync(string TVID)
+        {
+            await Task.Run(() => AddTVActors(TVID));
+        }
+
+        public void AddTVActors(string TVID)
+        {
+            var proverka = Film.Methods.Actors(TVID);
+            var res = new ActorsTemplate();
+            if (proverka != null)
+            {
+                res.Update(Keyboards.ActorResultsTV(proverka.Take(Math.Min(5, proverka.Count))));
+                TVActors[TVID] = res;
+            }
+            else
+            {
+                TVActors[TVID] = res;
+                TVActors[TVID].IsLoading = false;
             }
         }
 

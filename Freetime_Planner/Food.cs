@@ -61,7 +61,8 @@ namespace Freetime_Planner
 
             var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
             {
-                Link = $"https://www.youtube.com/watch?v={results.items[r.Next(0, 5)].id.videoId}"
+                Link = $"https://www.youtube.com/watch?v={results.items[r.Next(0, 5)].id.videoId}",
+                Name = "Закуска подана. Приятного аппетита!"
             });
             wc.DownloadString(video.UploadUrl);
             return video;
@@ -93,7 +94,8 @@ namespace Freetime_Planner
 
             var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
             {
-                Link = $"https://www.youtube.com/watch?v={results.items[r.Next(0, 5)].id.videoId}"
+                Link = $"https://www.youtube.com/watch?v={results.items[r.Next(0, 5)].id.videoId}",
+                Name = "Коктейль подан. Приятного аппетита!"
             });
             wc.DownloadString(video.UploadUrl);
             return video;
@@ -125,7 +127,8 @@ namespace Freetime_Planner
 
             var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
             {
-                Link = $"https://www.youtube.com/watch?v={results.items[r.Next(0, 5)].id.videoId}"
+                Link = $"https://www.youtube.com/watch?v={results.items[r.Next(0, 5)].id.videoId}",
+                Name = "Десерт подан. Приятного аппетита!"
             });
             wc.DownloadString(video.UploadUrl);
             return video;

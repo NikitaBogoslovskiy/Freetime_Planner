@@ -458,7 +458,7 @@ namespace Freetime_Planner
             else if (actor.nameEn != null && actor.nameEn != string.Empty)
                 element.Title = actor.nameEn;
             else return false;
-            if (actor.description == null || actor.description == string.Empty)
+            if (actor.description == null || actor.description == string.Empty || actor.description.Length >= 80)
                 element.Description = "Безымянный";
             else
                 element.Description = actor.description;
@@ -500,7 +500,7 @@ namespace Freetime_Planner
             else if (actor.nameEn != null && actor.nameEn != string.Empty)
                 element.Title = actor.nameEn;
             else return false;
-            if (actor.description == null || actor.description == string.Empty)
+            if (actor.description == null || actor.description == string.Empty || actor.description.Length >= 80)
                 element.Description = "Безымянный";
             else
                 element.Description = actor.description;
