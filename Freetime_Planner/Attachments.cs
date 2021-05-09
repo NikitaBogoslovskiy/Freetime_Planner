@@ -272,15 +272,28 @@ namespace Freetime_Planner
             }
         }
 
-        public static string RandomTVPosterID(RandomTV.Film film)
+        public static string RandomTVPosterID(RandomTV.Film film, out string photoID2)
         {
             try
             { 
                 string path = String.Format(Bot.directory + "/tv_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.posterUrl, path);
+                //не обрез
                 if (!CropAndOverwrite(path))
-                    return null;
+                { photoID2 = null; return null; }
+                var uploadServer2 = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_random_tv, Bot.group_id_service);
+                var responseFile2 = Encoding.ASCII.GetString(wc.UploadFile(uploadServer2.UploadUrl, path));
+                var photo2 = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                {
+                    SaveFileResponse = responseFile2,
+                    AlbumId = Bot.album_id_random_tv,
+                    GroupId = Bot.group_id_service
+                }).First();
+                photoID2 = $"-{Bot.group_id_service}_{photo2.Id}";
+                //обрез
+                if (!CropAndOverwrite(path))
+                { photoID2 = null; return null; }
                 var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_random_tv, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
@@ -296,19 +309,39 @@ namespace Freetime_Planner
             catch (Exception e)
             {
                 WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
+                photoID2 = null;
                 return null;
             }
         }
 
-        public static string RecommendedTVPosterID(TV.TVObject tv)
+        public static string RecommendedTVPosterID(TV.TVObject tv, out string photoID2)
         {
             try
-            { 
+            {
                 string path = String.Format(Bot.directory + "/tv_{0}_{1}.jpg", tv.data.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(tv.data.posterUrl, path);
-                if (!CropAndOverwrite(path))
+                //загрузка необрезаного постера
+                if (!SizeIsWell(path))
+                {
+                    photoID2 = null;
                     return null;
+                }
+                var uploadServer2 = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended_tv, Bot.group_id_service);
+                var responseFile2 = Encoding.ASCII.GetString(wc.UploadFile(uploadServer2.UploadUrl, path));
+                var photo2 = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                {
+                    SaveFileResponse = responseFile2,
+                    AlbumId = Bot.album_id_recommended_tv,
+                    GroupId = Bot.group_id_service
+                }).First();
+                photoID2 = $"-{Bot.group_id_service}_{photo2.Id}";
+                //обрезаный постер
+                if (!CropAndOverwrite(path))
+                {
+                    photoID2 = null;
+                    return null;
+                }
                 var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended_tv, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
@@ -324,6 +357,7 @@ namespace Freetime_Planner
             catch (Exception e)
             {
                 WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
+                photoID2 = null;
                 return null;
             }
         }
