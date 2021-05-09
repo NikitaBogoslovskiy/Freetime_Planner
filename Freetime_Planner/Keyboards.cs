@@ -779,7 +779,7 @@ namespace Freetime_Planner
             {
                 //Bot.attachments = new List<MediaAttachment> { Bot.private_vkapi.Photo.GetById(new string[] { f.data.VKPhotoID })[0] };
                 var answer = TVMessage(f, out var k);
-                Bot.SendMessage(user, answer, k, null, new List<MediaAttachment> { Bot.private_vkapi.Photo.GetById(new string[] { f.data.VKPhotoID })[0] });
+                Bot.SendMessage(user, answer, k, null, new List<MediaAttachment> { Bot.private_vkapi.Photo.GetById(new string[] { f.data.VKPhotoID_2 })[0] });
             }
         }
         public static string TVMessage(TVObject tv, out MessageKeyboard keyboard)

@@ -348,6 +348,7 @@ namespace Freetime_Planner
             public List<string> facts { get; set; }
             public List<Season> seasons { get; set; }
             public string VKPhotoID { get; set; }
+            public string VKPhotoID_2 { get; set; }
         }
 
         public class ExternalId

@@ -201,22 +201,37 @@ namespace Freetime_Planner
         //Вложения для сериалов
         #region TVPosters
 
-        public static string PopularTVPosterID(TV.TVObject tv)
+        public static string PopularTVPosterID(TV.TVObject tv, out string photoID2)
         {
             try
             { 
                 string path = String.Format(Bot.directory + "/tv_{0}_{1}.jpg", tv.data.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(tv.data.posterUrl, path);
-                if (!CropAndOverwrite(path))
-                    return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular_tv, Bot.group_id_service);
-                var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
-                var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                //необрезаные фото
+                if (!SizeIsWell(path))
+                {   photoID2 = null;
+                    return null; }
+                var uploadServer2 = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular_tv, Bot.group_id_service);
+                var responseFile2 = Encoding.ASCII.GetString(wc.UploadFile(uploadServer2.UploadUrl, path));
+                var photo2 = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
                 {
-                    SaveFileResponse = responseFile,
+                    SaveFileResponse = responseFile2,
                     AlbumId = Bot.album_id_popular_tv,
                     GroupId = Bot.group_id_service
+                }).First();
+                photoID2 = $"-{Bot.group_id_service}_{photo2.Id}";
+                //обрезаные фото
+                if (!CropAndOverwrite(path))//
+               
+                { photoID2 = null;  return null; }
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular_tv, Bot.group_id_service);
+                var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));//
+                var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams//
+                {
+                    SaveFileResponse = responseFile,
+                    AlbumId = Bot.album_id_popular_tv,//
+                    GroupId = Bot.group_id_service//
                 }).First();
                 var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
@@ -225,7 +240,7 @@ namespace Freetime_Planner
             catch (Exception e)
             {
                 WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
-                return null;
+                photoID2 = null; return null;
             }
         }
 
