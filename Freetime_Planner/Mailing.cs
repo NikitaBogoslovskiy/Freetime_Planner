@@ -144,7 +144,7 @@ namespace Freetime_Planner
                 if (film.data.facts.Count != 0)
                     Facts = film.data.facts.Shuffle().Take(Math.Min(3, film.data.facts.Count)).ToList();
 
-                var soundtrack = new List<Audio>();
+                /*var soundtrack = new List<Audio>();
                 if (film.data.type == "FILM")
                 {
                     string fname, addition;
@@ -175,11 +175,11 @@ namespace Freetime_Planner
                         addition = "сериал";
                     }
                     TV.Methods.DownloadSoundtrack(fname, addition, soundtrack, 2);
-                }
+                }*/
                 id = film.data.filmId.ToString();
                 Name = name;
                 Year = year;
-                SoundTrack = soundtrack;
+                SoundTrack = null;
             }
 
             public void createTrailer(string filmid, string ruName, string engName, string year)

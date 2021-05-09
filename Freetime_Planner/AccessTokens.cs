@@ -8,7 +8,8 @@ namespace Freetime_Planner
 {
     public class AccessTokens
     {
-        public string _access_token { get; set; }
+        public string _access_token_main { get; set; }
+        public string _access_token_service { get; set; }
         public string _private_access_token { get; set; }
         public string _mdb_key { get; set; }
         public string _kp_key { get; set; }
@@ -27,7 +28,8 @@ namespace Freetime_Planner
         {
             Bot.directory = GetCurrentDirectory();
             var token_object = JsonConvert.DeserializeObject<AccessTokens>(File.ReadAllText(Bot.directory + "/Access_Tokens.json"));
-            Bot._access_token = token_object._access_token;
+            Bot._access_token_main = token_object._access_token_main;
+            Bot._access_token_service = token_object._access_token_service;
             Bot._private_access_token = token_object._private_access_token;
             Bot._mdb_key = token_object._mdb_key;
             Bot._kp_key = token_object._kp_key;

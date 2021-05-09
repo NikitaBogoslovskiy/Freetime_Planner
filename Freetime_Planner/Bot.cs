@@ -44,7 +44,8 @@ namespace Freetime_Planner
         /// <summary>
         /// Объект для работы с сообществом через VkApi
         /// </summary>
-        public static VkApi vkapi;
+        public static VkApi vkapi_service;
+        public static VkApi vkapi_main;
 
         /// <summary>
         /// Объект для работы с пользовательским аккаунтом через VkApi
@@ -59,7 +60,8 @@ namespace Freetime_Planner
         /// <summary>
         /// Поле, хранящее токен авторизации бота
         /// </summary>
-        public static string _access_token;
+        public static string _access_token_main;
+        public static string _access_token_service;
 
         /// <summary>
         /// Поле, хранящее пользовательский токен
@@ -122,58 +124,70 @@ namespace Freetime_Planner
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены служебные изображения
         /// </summary>
-        public static long album_id = 277695979;
-        //public static long album_id = 273234101;
+        //public static long album_id = 277695979;
+        public static long album_id = 273234101;
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены изображения актеров
         /// </summary>
-        public static long album_id_actors = 280879039;
+        //public static long album_id_actors = 280879039;
         //public static long album_id_actors = 273234101;
+        public static long album_id_actors = 279214092;
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены постеры популярных фильмов
         /// </summary>
-        public static long album_id_popular = 278759103;
+        //public static long album_id_popular = 278759103;
         //public static long album_id_popular = 273234101;
+        public static long album_id_popular = 279214123;
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены постеры популярных сериалов
         /// </summary>
-        public static long album_id_popular_tv = 278837885;
+        //public static long album_id_popular_tv = 278837885;
         //public static long album_id_popular_tv = 273234101;
+        public static long album_id_popular_tv = 279214108;
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены постеры рекомендованных фильмов
         /// </summary>
-        public static long album_id_recommended = 278816822;
+        //public static long album_id_recommended = 278816822;
         //public static long album_id_recommended = 273234101;
+        public static long album_id_recommended = 279214120;
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены постеры рекомендованных сериалов
         /// </summary>
-        public static long album_id_recommended_tv = 278839233;
+        //public static long album_id_recommended_tv = 278839233;
         //public static long album_id_recommended_tv = 273234101;
+        public static long album_id_recommended_tv = 279214104;
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены постеры фильмов из результатов поисковой выдачи
         /// </summary>
-        public static long album_id_results = 278816830;
+        //public static long album_id_results = 278816830;
         //public static long album_id_results = 273234101;
+        public static long album_id_results = 279214116;
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены постеры сериалов из результатов поисковой выдачи
         /// </summary>
-        public static long album_id_results_tv = 278840696;
+        //public static long album_id_results_tv = 278840696;
         //public static long album_id_results_tv = 273234101;
+        public static long album_id_results_tv = 279214099;
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены постеры фильмов из выдачи случайных фильмов
         /// </summary>
-        public static long album_id_random = 278816835;
+        //public static long album_id_random = 278816835;
         //public static long album_id_random = 273234101;
+        //public static long album_id_random = 279214111;
+        public static long album_id_random = 279214100;
         /// <summary>
         /// ID альбома в Вконтакте, в котором размещены постеры сериалов из выдачи случайных сериалов
         /// </summary>
-        public static long album_id_random_tv = 278840440;
+        //public static long album_id_random_tv = 278840440;
         //public static long album_id_random_tv = 273234101;
+        public static long album_id_random_tv = 279214100;
         /// <summary>
         /// ID группы ВКонтакте
         /// </summary>
-        public static long group_id = 199604726;
+        //public static long group_id = 199604726;
         //public static long group_id = 196898018;
+        public static long group_id_service = 196898018;
+        public static long group_id_main = 204471838;
         /// <summary>
         /// Поле, хранящее пользователя, с которым бот ведет диалог в данный момент времени
         /// </summary>
@@ -246,7 +260,8 @@ namespace Freetime_Planner
         {
             Title = "Freetime Planner";
             WritelnColor("Bot", ConsoleColor.Yellow);
-            vkapi = new VkApi();
+            vkapi_main = new VkApi();
+            vkapi_service = new VkApi();
             var service = new ServiceCollection();
             service.AddAudioBypass();
             private_vkapi = new VkApi(service);
@@ -263,7 +278,8 @@ namespace Freetime_Planner
             try
             {
                 WritelnColor("Попытка авторизации...", ConsoleColor.White);
-                vkapi.Authorize(new ApiAuthParams { AccessToken = _access_token });
+                vkapi_main.Authorize(new ApiAuthParams { AccessToken = _access_token_main });
+                vkapi_service.Authorize(new ApiAuthParams { AccessToken = _access_token_service });
                 private_vkapi.Authorize(new ApiAuthParams
                 {
                     Login = _vk_login,
@@ -311,11 +327,12 @@ namespace Freetime_Planner
             WritelnColor("Авторизция успешно завершена", ConsoleColor.Green);
             Console.Beep();
             WritelnColor("Включаю режим отслеживания...", ConsoleColor.White);
-            var response = vkapi.Groups.GetLongPollServer((ulong)Bot.group_id);
+            var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
+
             Ts = response.Ts;
-            Eye();
-            //EyeAsync();
-            WritelnColor("Запросов в секунду доступно: " + vkapi.RequestsPerSecond, ConsoleColor.White);
+            //Eye();
+            EyeAsync();
+            WritelnColor("Запросов в секунду доступно: " + vkapi_main.RequestsPerSecond, ConsoleColor.White);
         }
 
         /// <summary>
@@ -336,7 +353,7 @@ namespace Freetime_Planner
         {
             try
             {
-                vkapi.Messages.Send(new MessagesSendParams
+                vkapi_main.Messages.Send(new MessagesSendParams
                 {
                     UserId = user.ID,
                     Message = message,
@@ -385,103 +402,103 @@ namespace Freetime_Planner
         delegate void MessagesRecievedDelegate(VkApi owner, ReadOnlyCollection<VkNet.Model.Message> messages);
         static event MessagesRecievedDelegate NewMessages;
 
-        /*        static async void EyeAsync()
-                {
-                    await Task.Run(() => Eye());
-                }
+        static async void EyeAsync()
+        {
+            await Task.Run(() => Eye());
+        }
 
-                static void Eye()
+        static void Eye()
+        {
+            while (true)
+            {
+                try
                 {
-                    while (true)
+                    var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
+                    var history = vkapi_main.Groups.GetBotsLongPollHistory(new BotsLongPollHistoryParams
                     {
-                        try
+                        Key = response.Key,
+                        Ts = Ts,
+                        Server = response.Server,
+                        Wait = 0
+                    });
+                    //Pts = response.Pts;
+                    Ts = history.Ts;
+                    if (history == null || history.Updates.Count() == 0)
+                        continue;
+                    foreach (var m in history.Updates.Where(u => u.Type == GroupUpdateType.MessageNew))
+                    {
+                        var m1 = m.MessageNew.Message;
+                        if (m1.Type == MessageType.Received)
                         {
-                            var response = vkapi.Groups.GetLongPollServer((ulong)Bot.group_id);
-                            var history = vkapi.Groups.GetBotsLongPollHistory(new BotsLongPollHistoryParams
-                            {
-                                Key = response.Key,
-                                Ts = Ts,
-                                Server = response.Server,
-                                Wait = 0
-                            });
-                            //Pts = response.Pts;
-                            Ts = history.Ts;
-                            if (history == null || history.Updates.Count() == 0)
-                                continue;
-                            foreach (var m in history.Updates.Where(u => u.Type == GroupUpdateType.MessageNew))
-                            {
-                                var m1 = m.MessageNew.Message;
-                                if (m1.Type == MessageType.Received)
-                                {
-                                    GetMessageAsync(m1, m.MessageNew.ClientInfo);
-                                }
-                            }
-
-                        }
-                        catch (Exception)
-                        {
-                            Thread.Sleep(1000);
+                            GetMessageAsync(m1, m.MessageNew.ClientInfo);
                         }
                     }
+                    Thread.Sleep(350);
                 }
-
-                static async void GetMessageAsync(Message message, ClientInfo info)
+                catch (Exception)
                 {
-                    await Task.Run(() => GetMessage(message, info));
+                    Thread.Sleep(1000);
                 }
+            }
+        }
 
-                static void GetMessage(Message message, ClientInfo info)
+        static async void GetMessageAsync(Message message, ClientInfo info)
+        {
+            await Task.Run(() => GetMessage(message, info));
+        }
+
+        static void GetMessage(Message message, ClientInfo info)
+        {
+            if (message.Type != MessageType.Sended)
+            {
+                VkNet.Model.User Sender = vkapi_main.Users.Get(new long[] { message.PeerId.Value }, ProfileFields.Online)[0];
+                bool b = info.InlineKeyboard;
+                bool? IsMobileVersion = true; // = b
+                var user = Users.GetUser(Sender, out bool IsOld);
+                if (message.Attachments.Count != 0)
                 {
-                    if (message.Type != MessageType.Sended)
+                    if (message.Attachments[0].Instance is AudioMessage am)
                     {
-                        VkNet.Model.User Sender = vkapi.Users.Get(new long[] { message.PeerId.Value }, ProfileFields.Online)[0];
-                        bool b = info.InlineKeyboard;
-                        bool? IsMobileVersion = true; // = b
-                        var user = Users.GetUser(Sender, out bool IsOld);
-                        if (message.Attachments.Count != 0)
+                        if (am.TranscriptState == TranscriptStates.InProgress)
                         {
-                            if (message.Attachments[0].Instance is AudioMessage am)
-                            {
-                                if (am.TranscriptState == TranscriptStates.InProgress)
-                                {
-                                    //SendMessage("Обрабатываю голосовое сообщение...");
-                                    return;
-                                }
-                                if (user.CurrentLevel() == Mode.Film || user.CurrentLevel() == Mode.TV || user.CurrentLevel() == Mode.Search)
-                                {
-                                    message.Text = am.Transcript;
-                                    if (user.CurrentLevel() != Mode.Search)
-                                        user.AddLevel(Mode.Search);
-                                }
-                                else
-                                {
-                                    SendMessage(user, "Голосовые сообщения я понимаю только в вкладках 'Фильмы' и 'Сериалы': с помощью голосовых ты можешь искать фильмы и сериалы по названию");
-                                    return;
-                                }
-                            }
-                            else if (IsOld)
-                            {
-                                SendMessage(user, "Мне тяжело понимать любые медивложения (фото, видео, аудиозаписи, стикеры), кроме голосовых сообщений: их ты можешь использовать во вкладках" +
-                                    " 'Фильмы' и 'Сериалы' для поиска фильмов и сериалов по названию");
-                                return;
-                            }
-                        }
-
-                        WriteLine($"Новое сообщение от пользователя {Sender.FirstName} {Sender.LastName}: {message.Text}");
-                        if (!IsOld)
-                        {
-                            SendMessage(user, $"Привет, {user.Name}! Я Freetime Planner - чат-бот Вконтакте, помогающий подобрать фильм, сериал или еду для просмотра. Ниже тебе уже доступны кнопки, " +
-                                $"с помоью которых и будет проходить наше общение 🙃. Одна из них - 'Помощь', нажав на которую ты узнаешь обо мне немного больше. Приятного досуга!", Keyboards.MainKeyboard);
+                            //SendMessage("Обрабатываю голосовое сообщение...");
                             return;
                         }
-                        CommandCentre(user, message, IsMobileVersion);
+                        if (user.CurrentLevel() == Mode.Film || user.CurrentLevel() == Mode.TV || user.CurrentLevel() == Mode.Search)
+                        {
+                            message.Text = am.Transcript;
+                            if (user.CurrentLevel() != Mode.Search)
+                                user.AddLevel(Mode.Search);
+                        }
+                        else
+                        {
+                            SendMessage(user, "Голосовые сообщения я понимаю только в вкладках 'Фильмы' и 'Сериалы': с помощью голосовых ты можешь искать фильмы и сериалы по названию");
+                            return;
+                        }
                     }
-                }*/
+                    else if (IsOld)
+                    {
+                        SendMessage(user, "Мне тяжело понимать любые медивложения (фото, видео, аудиозаписи, стикеры), кроме голосовых сообщений: их ты можешь использовать во вкладках" +
+                            " 'Фильмы' и 'Сериалы' для поиска фильмов и сериалов по названию");
+                        return;
+                    }
+                }
+
+                WriteLine($"Новое сообщение от пользователя {Sender.FirstName} {Sender.LastName}: {message.Text}");
+                if (!IsOld)
+                {
+                    SendMessage(user, $"Привет, {user.Name}! Я Freetime Planner - чат-бот Вконтакте, помогающий подобрать фильм, сериал или еду для просмотра. Ниже тебе уже доступны кнопки, " +
+                        $"с помоью которых и будет проходить наше общение 🙃. Одна из них - 'Помощь', нажав на которую ты узнаешь обо мне немного больше. Приятного досуга!", Keyboards.MainKeyboard);
+                    return;
+                }
+                CommandCentre(user, message, IsMobileVersion);
+            }
+        }
 
         /// <summary>
         /// Функция, отслеживающая входящие сообщения
         /// </summary>
-        static void Eye()
+        /*static void Eye()
         {
             LongPollServerResponse Pool = vkapi.Messages.GetLongPollServer(true);
             StartAsync(Pool.Ts, Pool.Pts);
@@ -624,7 +641,7 @@ namespace Freetime_Planner
                     CommandCentre(user, message, IsMobileVersion);
                 }
             }
-        }
+        }*/
 
         /// <summary>
         /// Действия, выполняемые перед окончанием программы
@@ -787,7 +804,7 @@ namespace Freetime_Planner
                                 //"Актеры"
                                 case Actors:
                                     SendMessage(user, "Формирую список актеров...");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                    vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
                                     var filmmetod = Film.Methods.ActorMessage(p.filmId);
                                     if (filmmetod == null)
                                         SendMessage(user, "К сожалению, для этого сериала я не смог ничего найти... 😔");
@@ -799,10 +816,12 @@ namespace Freetime_Planner
                                 //"Узнать больше"
                                 case MoreAboutActor:
                                     SendMessage(user,"Ищу информацию по этому актеру:");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                    vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
                                     var m = Film.Methods.ActorDescriptionMessage(user, p.filmId, out var Actora);
                                     SendMessage(user,m,null,null,Actora);
                                     break;
+
+                               
 
                                 //"Саундтрек"
                                 case Soundtrack:
@@ -859,7 +878,7 @@ namespace Freetime_Planner
                                 //"Подробнее"
                                 case More:
                                     SendMessage(user, "Готовлю детали по фильму...");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                    vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
                                     if (user.FilmRecommendations.TryGetValue(int.Parse(p.filmId), out Film.FilmObject film))
                                     {
                                         if (film.data.nameEn != null)
@@ -936,6 +955,11 @@ namespace Freetime_Planner
                                 case Search:
                                     //keyboard = null;
                                     SendMessage(user, "Введи название фильма");
+                                    break;
+                                
+                                //Поиск по жанрам
+                                case SearchGenre:
+                                    SendMessage(user,"Выбери жанр", Keyboards.SearchGenreList(), null,null);
                                     break;
 
                                 //"Мои рекомендации"-------------------------------------------
@@ -1045,7 +1069,7 @@ namespace Freetime_Planner
                                 //"Актеры"
                                 case Actors:
                                     SendMessage(user, "Формирую список актеров...");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                    vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
                                     var tvmetod = TV.Methods.ActorMessage(p.filmId);
                                     if (tvmetod == null)
                                         SendMessage(user, "К сожалению, для этого сериала я не смог ничего найти... 😔");
@@ -1060,7 +1084,7 @@ namespace Freetime_Planner
                                 //"Узнать больше"
                                 case MoreAboutActor:
                                     SendMessage(user, "Ищу информацию по этому актеру:");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                    vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
                                     var m = TV.Methods.ActorDescriptionMessageTV(user, p.filmId, out var Actora);
                                     SendMessage(user, m, null, null, Actora);
                                     break;
@@ -1120,7 +1144,7 @@ namespace Freetime_Planner
                                 //"Подробнее"
                                 case More:
                                     SendMessage(user, "Готовлю детали по сериалу...");
-                                    vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                    vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
                                     if (user.TVRecommendations.TryGetValue(int.Parse(p.filmId), out TV.TVObject tv))
                                     {
                                         if (tv.data.nameEn != null)
@@ -1198,6 +1222,13 @@ namespace Freetime_Planner
                                     //keyboard = null;
                                     SendMessage(user, "Введи название сериала");
                                     break;
+
+
+                                //Поиск по жанрам
+                                case SearchGenre:
+                                    SendMessage(user, "Выбери жанр", Keyboards.SearchGenreList(), null, null);
+                                    break;
+
 
                                 //"Мои рекомендации"
                                 case Recommendations:
@@ -1470,7 +1501,7 @@ namespace Freetime_Planner
                                 //keyboard = null;
                                 SendMessage(user, "Ищу фильмы по введенному названию...");
 
-                                vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
                                 if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                 {
                                     var template = Film.Methods.Search(message.Text);
@@ -1550,7 +1581,7 @@ namespace Freetime_Planner
                             case Search:
                                 //keyboard = null;
                                 SendMessage(user, "Ищу сериалы по введенному названию...");
-                                vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
                                 if (IsMobileVersion.HasValue && IsMobileVersion.Value)
                                 {
                                     var template = TV.Methods.Search(message.Text);

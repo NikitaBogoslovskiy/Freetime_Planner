@@ -50,15 +50,15 @@ namespace Freetime_Planner
                 // обрезание
                 if (!CropAndOverwrite(path))
                     return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular, Bot.group_id);
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
                 {
                     SaveFileResponse = responseFile,
                     AlbumId = Bot.album_id_popular,
-                    GroupId = Bot.group_id
+                    GroupId = Bot.group_id_service
                 }).First();
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
             }
@@ -79,15 +79,15 @@ namespace Freetime_Planner
                 wc.DownloadFile(film.posterUrl, path);
                 if (!CropAndOverwrite(path))
                     return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_results, Bot.group_id);
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_results, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
                 {
                     SaveFileResponse = responseFile,
                     AlbumId = Bot.album_id_results,
-                    GroupId = Bot.group_id
+                    GroupId = Bot.group_id_service
                 }).First();
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
             }
@@ -127,10 +127,9 @@ namespace Freetime_Planner
                 {
                     SaveFileResponse = responseFile,
                     AlbumId = Bot.album_id_random,
-                    GroupId = Bot.group_id
+                    GroupId = Bot.group_id_service
                 }).First();
-               
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
             }
@@ -151,15 +150,15 @@ namespace Freetime_Planner
                 wc.DownloadFile(film.data.posterUrl, path);
                 if (!CropAndOverwrite(path))
                     return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended, Bot.group_id);
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
                 {
                     SaveFileResponse = responseFile,
                     AlbumId = Bot.album_id_recommended,
-                    GroupId = Bot.group_id
+                    GroupId = Bot.group_id_service
                 }).First();
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
             }
@@ -211,15 +210,15 @@ namespace Freetime_Planner
                 wc.DownloadFile(tv.data.posterUrl, path);
                 if (!CropAndOverwrite(path))
                     return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular_tv, Bot.group_id);
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular_tv, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
                 {
                     SaveFileResponse = responseFile,
                     AlbumId = Bot.album_id_popular_tv,
-                    GroupId = Bot.group_id
+                    GroupId = Bot.group_id_service
                 }).First();
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
             }
@@ -239,15 +238,15 @@ namespace Freetime_Planner
                 wc.DownloadFile(film.posterUrl, path);
                 if (!CropAndOverwrite(path))
                     return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_results_tv, Bot.group_id);
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_results_tv, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
                 {
                     SaveFileResponse = responseFile,
                     AlbumId = Bot.album_id_results_tv,
-                    GroupId = Bot.group_id
+                    GroupId = Bot.group_id_service
                 }).First();
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
             }
@@ -267,15 +266,15 @@ namespace Freetime_Planner
                 wc.DownloadFile(film.posterUrl, path);
                 if (!CropAndOverwrite(path))
                     return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_random_tv, Bot.group_id);
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_random_tv, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
                 {
                     SaveFileResponse = responseFile,
                     AlbumId = Bot.album_id_random_tv,
-                    GroupId = Bot.group_id
+                    GroupId = Bot.group_id_service
                 }).First();
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
             }
@@ -295,15 +294,15 @@ namespace Freetime_Planner
                 wc.DownloadFile(tv.data.posterUrl, path);
                 if (!CropAndOverwrite(path))
                     return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended_tv, Bot.group_id);
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended_tv, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
                 {
                     SaveFileResponse = responseFile,
                     AlbumId = Bot.album_id_recommended_tv,
-                    GroupId = Bot.group_id
+                    GroupId = Bot.group_id_service
                 }).First();
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
             }
@@ -325,15 +324,15 @@ namespace Freetime_Planner
                 wc.DownloadFile(actor.posterUrl, path);
                 if (!CropAndOverwrite(path))
                     return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_actors, Bot.group_id);
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_actors, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
                 {
                     SaveFileResponse = responseFile,
                     AlbumId = Bot.album_id_actors,
-                    GroupId = Bot.group_id
+                    GroupId = Bot.group_id_service
                 }).First();
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
             }
@@ -351,18 +350,18 @@ namespace Freetime_Planner
             try
             {
                 wc.DownloadFile(url, path);
-                var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(user.ID);
+                var uploadServer = Bot.vkapi_main.Photo.GetMessagesUploadServer(user.ID);
                 var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
-                var photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
+                var photo = Bot.vkapi_main.Photo.SaveMessagesPhoto(result).First();
                 File.Delete(path);
                 return photo;
             }
             catch (Exception e)
             {
                 WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
-                var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(user.ID);
+                var uploadServer = Bot.vkapi_main.Photo.GetMessagesUploadServer(user.ID);
                 var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, DefaultPosterPath));
-                var photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
+                var photo = Bot.vkapi_main.Photo.SaveMessagesPhoto(result).First();
                 return photo;
             }
         }
@@ -375,15 +374,15 @@ namespace Freetime_Planner
                 wc.DownloadFile(url, path);
                 if (!SizeIsWell(path))
                     return null;
-                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular, Bot.group_id);
+                var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular, Bot.group_id_service);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
                 {
                     SaveFileResponse = responseFile,
                     AlbumId = Bot.album_id_popular,
-                    GroupId = Bot.group_id
+                    GroupId = Bot.group_id_service
                 }).First();
-                var vkid = $"-{Bot.group_id}_{photo.Id}";
+                var vkid = $"-{Bot.group_id_service}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
             }
@@ -407,9 +406,9 @@ namespace Freetime_Planner
                     File.Delete(path);
                     return false;
                 }
-                var uploadServer = Bot.vkapi.Photo.GetMessagesUploadServer(user.ID);
+                var uploadServer = Bot.vkapi_main.Photo.GetMessagesUploadServer(user.ID);
                 var result = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
-                photo = Bot.vkapi.Photo.SaveMessagesPhoto(result).First();
+                photo = Bot.vkapi_main.Photo.SaveMessagesPhoto(result).First();
                 File.Delete(path);
                 return true;
             }
