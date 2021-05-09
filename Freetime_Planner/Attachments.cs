@@ -24,13 +24,30 @@ namespace Freetime_Planner
         /// </summary>
         /// <param name="film"></param>
         /// <returns></returns>
-        public static string PopularFilmPosterID(Film.FilmObject film)
+        public static string PopularFilmPosterID(Film.FilmObject film,out string photoID2)
         {
             try 
             { 
                 string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", film.data.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.data.posterUrl, path);
+                if (!SizeIsWell(path))
+                {
+                    photoID2 = null;
+                    return null; 
+                }
+
+                //загрузка полноценных фотографий - не импотентов
+                var uploadServer2 = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular, Bot.group_id);
+                var responseFile2 = Encoding.ASCII.GetString(wc.UploadFile(uploadServer2.UploadUrl, path));
+                var photo2 = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                {
+                    SaveFileResponse = responseFile2,
+                    AlbumId = Bot.album_id_popular,
+                    GroupId = Bot.group_id
+                }).First();
+                photoID2 = $"-{Bot.group_id}_{photo2.Id}";
+                // обрезание
                 if (!CropAndOverwrite(path))
                     return null;
                 var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_popular, Bot.group_id);
@@ -48,6 +65,7 @@ namespace Freetime_Planner
             catch (Exception e)
             {
                 WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
+                photoID2 = null;
                 return null;
             }
         }
@@ -80,15 +98,29 @@ namespace Freetime_Planner
             }
         }
 
-        public static string RandomFilmPosterID(RandomFilms.Film film)
+        public static string RandomFilmPosterID(RandomFilms.Film film,out string photoID2)
         {
             try
             { 
                 string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", film.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.posterUrl, path);
+                if (!SizeIsWell(path))
+                {
+                    photoID2 = null;
+                    return null; }
+                var uploadServer2 = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_random, Bot.group_id);
+                var responseFile2 = Encoding.ASCII.GetString(wc.UploadFile(uploadServer2.UploadUrl, path));
+                var photo2 = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                {
+                    SaveFileResponse = responseFile2,
+                    AlbumId = Bot.album_id_random,
+                    GroupId = Bot.group_id
+                }).First();
+                photoID2 = $"-{Bot.group_id}_{photo2.Id}";
                 if (!CropAndOverwrite(path))
-                    return null;
+                { photoID2 = null;
+                    return null; }
                 var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_random, Bot.group_id);
                 var responseFile = Encoding.ASCII.GetString(wc.UploadFile(uploadServer.UploadUrl, path));
                 var photo = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
@@ -97,6 +129,7 @@ namespace Freetime_Planner
                     AlbumId = Bot.album_id_random,
                     GroupId = Bot.group_id
                 }).First();
+               
                 var vkid = $"-{Bot.group_id}_{photo.Id}";
                 File.Delete(path);
                 return vkid;
@@ -104,6 +137,7 @@ namespace Freetime_Planner
             catch (Exception e)
             {
                 WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
+                photoID2 = null;
                 return null;
             }
         }

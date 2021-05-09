@@ -200,7 +200,7 @@ namespace Freetime_Planner
         public static string FilmMessage(Film.FilmObject film, out Photo photo, out MessageKeyboard more)
         {
 
-            photo = Bot.private_vkapi.Photo.GetById(new string[] { film.data.VKPhotoID })[0];
+            photo = Bot.private_vkapi.Photo.GetById(new string[] { film.data.VKPhotoID_2 })[0];
 
             var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
                 button.AddButton("Подробнее", $"f;;;{film.data.filmId};;;", Positive, "text");
@@ -504,6 +504,39 @@ namespace Freetime_Planner
 
         }
         //------------------"Рандомный фильм" для не мобильного приложения -----------------------------------------------
+
+        public static void FilmMyRandomMessage(User user, IEnumerable<RandomFilms.Film> farray, bool b = true)
+        {
+            var arr = new List<(string, Photo, MessageKeyboard)>();
+            Parallel.ForEach(farray, (film, state) =>
+            {
+                // string message_part = null;//название,жанры одного фильма/сообщения
+                var message_part = FilmRandomMessage(film, out var photo, out var more);
+                arr.Add((message_part, photo, more));
+            });
+            if (b)
+                Bot.SendMessage(user, "Рандомные фильмы");
+            //
+            foreach (var m in arr)
+            {
+                //Bot.attachments = new List<MediaAttachment> { m.Item2 };
+                //Bot.keyboard = m.Item3;
+                Bot.SendMessage(user, m.Item1, m.Item3, null, new List<MediaAttachment> { m.Item2 });
+            }
+        }
+        public static string FilmRandomMessage(RandomFilms.Film film, out Photo photo, out MessageKeyboard more)
+        {
+
+            photo = Bot.private_vkapi.Photo.GetById(new string[] { film.VKPhotoID_2 })[0];
+
+            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            button.AddButton("Подробнее", $"f;;;{film.filmId};;;", Positive, "text");
+            button.SetInline();
+            more = button.Build();
+
+            string str = film.nameRu + "\nЖанр: " + string.Join(',', film.genres.Select(g => g.genre));
+            return str;
+        }
 
         public static void RandomFilmResultsMessage(User user, RandomFilms.Results results)
         {
