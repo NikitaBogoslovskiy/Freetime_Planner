@@ -654,6 +654,18 @@ namespace Freetime_Planner
             //Console.WriteLine(string.Join("\n", TVRandomDict.Values.Select(f => f.nameRu)));
             return Keyboards.RandomTVResults(TVRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
         }
+        public void RandomTVMessage(User user)
+        {
+            if (!RandomTVIsUpdating)
+            {
+                RandomTVIsUpdating = true;
+                UpdateTVRandomAsync();
+            }
+            if (TVRandomDict == null || TVRandomDict.Count == 0)
+                TVRandomDict = TV.RandomTV;
+            //Console.WriteLine(string.Join("\n", TVRandomDict.Values.Select(f => f.nameRu)));
+            Keyboards.RandomTVResultsMessage(user,TVRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+        }
 
         public string GetPlannedTV()
         {
@@ -808,9 +820,11 @@ namespace Freetime_Planner
                         if (tv == null)
                             continue;
                         tv.Priority = 2;
-                        tv.data.VKPhotoID = Attachments.RecommendedTVPosterID(tv);
+                        string photoID2;
+                        tv.data.VKPhotoID = Attachments.RecommendedTVPosterID(tv,out photoID2);
+                        tv.data.VKPhotoID_2 = photoID2;
                         //проверка валидности изображения
-                        if (tv.data.VKPhotoID != null)
+                        if (tv.data.VKPhotoID != null && tv.data.VKPhotoID_2 != null)
                         {
                             new_array[id] = tv;
                             //добавляем только требуемое количество
@@ -882,8 +896,10 @@ namespace Freetime_Planner
                 for (int i = 0; i < results.films.Count; ++i)
                 {
                     var t = results.films[i];
-                    t.VKPhotoID = Attachments.RandomTVPosterID(t);
-                    if (t.VKPhotoID == null)
+                    string photoID2;
+                    t.VKPhotoID = Attachments.RandomTVPosterID(t,out photoID2);
+                    t.VKPhotoID_2 = photoID2;
+                    if (t.VKPhotoID == null && t.VKPhotoID_2 == null)
                         continue;
                     dict[t.filmId] = t;
                 }

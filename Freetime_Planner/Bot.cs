@@ -186,10 +186,10 @@ namespace Freetime_Planner
         /// <summary>
         /// ID группы ВКонтакте
         /// </summary>
-        //public static long group_id = 199604726;
+        public static long group_id_main = 199604726;
         //public static long group_id = 196898018;
         public static long group_id_service = 196898018;
-        public static long group_id_main = 204471838;
+        //public static long group_id_main = 204471838;
         /// <summary>
         /// Поле, хранящее пользователя, с которым бот ведет диалог в данный момент времени
         /// </summary>
@@ -333,8 +333,13 @@ namespace Freetime_Planner
             Console.Beep();
             WritelnColor("Включаю режим отслеживания...", ConsoleColor.White);
             var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
-
+            Key = response.Key;
             Ts = response.Ts;
+            Server = response.Server;
+
+            /*  var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
+
+              Ts = response.Ts;*/
             //Eye();
             EyeAsync();
             WritelnColor("Запросов в секунду доступно: " + vkapi_main.RequestsPerSecond, ConsoleColor.White);
@@ -397,13 +402,16 @@ namespace Freetime_Planner
          3. Передается сообщение пользователя в командный центр
         */
         #region Watcher
+        /*       static string Ts;
+               static ulong? Pts;
+               static bool IsActive;
+               static Timer WatchTimer = null;
+               static byte MaxSleepSteps = 3;
+               static int StepSleepTime = 333;
+               static byte CurrentSleepSteps = 1;*/
+        static string Key;
         static string Ts;
-        static ulong? Pts;
-        static bool IsActive;
-        static Timer WatchTimer = null;
-        static byte MaxSleepSteps = 3;
-        static int StepSleepTime = 333;
-        static byte CurrentSleepSteps = 1;
+        static string Server;
         delegate void MessagesRecievedDelegate(VkApi owner, ReadOnlyCollection<VkNet.Model.Message> messages);
         static event MessagesRecievedDelegate NewMessages;
 
@@ -442,7 +450,10 @@ namespace Freetime_Planner
                 }
                 catch (Exception)
                 {
-                    Thread.Sleep(1000);
+                    var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
+                    Key = response.Key;
+                    Ts = response.Ts;
+                    Server = response.Server;
                 }
             }
         }
@@ -459,6 +470,7 @@ namespace Freetime_Planner
                 VkNet.Model.User Sender = vkapi_main.Users.Get(new long[] { message.PeerId.Value }, ProfileFields.Online)[0];
                 bool b = info.InlineKeyboard;
                 bool? IsMobileVersion = b;
+               // bool? IsMobileVersion = false;
                 var user = Users.GetUser(Sender, out bool IsOld);
                 if (message.Attachments.Count != 0)
                 {
@@ -1280,7 +1292,7 @@ namespace Freetime_Planner
                                     }
                                     else
                                     {
-                                        TV.Methods.Random_inMessage(user); //отправка сообщения внутри
+                                        user.RandomTVMessage(user); //отправка сообщения внутри
                                         //keyboard = null;
                                         //attachments = null;
                                     }

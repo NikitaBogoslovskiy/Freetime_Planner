@@ -89,7 +89,9 @@ namespace Freetime_Planner
         /// </summary>
         public static void UpdatePopularTV()
         {
+
             var res = new Dictionary<int, TVObject>();
+
 
             //добавление первой страницы сериалов
             var clientA = new RestSharp.RestClient("https://api.tmdb.org/3/tv/popular");
@@ -104,6 +106,7 @@ namespace Freetime_Planner
                 return;
             var list = deserializedA.results;
 
+
             //добавление второй страницы сериалов
             var clientB = new RestSharp.RestClient("https://api.tmdb.org/3/tv/popular");
             var requestB = new RestRequest(Method.GET);
@@ -117,9 +120,11 @@ namespace Freetime_Planner
                 //объединение двух списков-страниц в один список
                 list.AddRange(deserializedB.results);
 
+
             //параллельный обход списка
             foreach(var result in list)
             {
+
                 //запрос сериала по его названию
                 var KPclient1 = new RestSharp.RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
                 var KPrequest1 = new RestRequest(Method.GET);
@@ -141,7 +146,7 @@ namespace Freetime_Planner
                         {
                             id = f.filmId;
                             break;
-                        }
+                    }
                     if (id != 0 && !res.ContainsKey(id))
                     {
                         //запрос выбранного сериала по его ID
@@ -157,9 +162,12 @@ namespace Freetime_Planner
                         if (film != null)
                         {
                             film.Priority = 1;
-                            film.data.VKPhotoID = Attachments.PopularTVPosterID(film);
+                            string photoID2;
+                            film.data.VKPhotoID = Attachments.PopularTVPosterID(film, out photoID2);
+                            //ID Не обрезанного постера
+                            film.data.VKPhotoID_2 = photoID2;
                             //проверка валидности загруженной фотографии
-                            if (film.data.VKPhotoID != null)
+                            if (film.data.VKPhotoID != null && film.data.VKPhotoID_2 != null)
                                 res[id] = film;
                         }
                     }
@@ -167,7 +175,7 @@ namespace Freetime_Planner
             }
             PopularTV = res;
         }
-
+    
         public static void UpdateGenreTV()
         {/*
             var dict = new Dictionary<string, List<RandomTV.Film>>();
@@ -279,8 +287,10 @@ namespace Freetime_Planner
                 var dict = new Dictionary<int, RandomTV.Film>();
                 for (int i = 0; i < results.Count; ++i)
                 {
-                    results[i].VKPhotoID = Attachments.RandomTVPosterID(results[i]);
-                    if (results[i].VKPhotoID == null)
+                    string photoID2;
+                    results[i].VKPhotoID = Attachments.RandomTVPosterID(results[i],out photoID2);
+                    results[i].VKPhotoID_2 = photoID2;
+                    if (results[i].VKPhotoID == null && results[i].VKPhotoID_2 == null)
                         continue;
                     dict[results[i].filmId] = results[i];
                 }
@@ -347,7 +357,10 @@ namespace Freetime_Planner
             public List<Genre> genres { get; set; }
             public List<string> facts { get; set; }
             public List<Season> seasons { get; set; }
+            ///ID для обрезаннного фото
             public string VKPhotoID { get; set; }
+            ///ID для не обрезаннного фото
+            public string VKPhotoID_2 { get; set; }
         }
 
         public class ExternalId
@@ -575,7 +588,7 @@ namespace Freetime_Planner
                 return Keyboards.RandomTVResults(results);
             }*/
             //------- not mobile -------
-            public static void Random_inMessage(User user)
+           /* public static void Random_inMessage(User user)
             {
                 Random random = new Random();
                 int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
@@ -598,7 +611,7 @@ namespace Freetime_Planner
                 try { results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content); }
                 catch(Exception) { results = null; }
                 Keyboards.RandomTVResultsMessage(user, results);
-            }
+            }*/
             public static bool DownloadSoundtrack(string TVName, string addition, List<Audio> audios, int count)
             {
                 string[] song_names;
@@ -772,6 +785,7 @@ namespace Freetime_Planner
             public string posterUrlPreview { get; set; }
             public string nameEn { get; set; }
             public string VKPhotoID { get; set; }
+            public string VKPhotoID_2 { get; set; }
         }
 
         public class Results
