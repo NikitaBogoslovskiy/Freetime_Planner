@@ -186,10 +186,10 @@ namespace Freetime_Planner
         /// <summary>
         /// ID группы ВКонтакте
         /// </summary>
-        //public static long group_id = 199604726;
+        public static long group_id_main = 199604726;
         //public static long group_id = 196898018;
         public static long group_id_service = 196898018;
-        public static long group_id_main = 204471838;
+        //public static long group_id_main = 204471838;
         /// <summary>
         /// Поле, хранящее пользователя, с которым бот ведет диалог в данный момент времени
         /// </summary>
@@ -262,10 +262,10 @@ namespace Freetime_Planner
         {
             Title = "Freetime Planner";
             WritelnColor("Bot", ConsoleColor.Yellow);
-            vkapi_main = new VkApi();
-            vkapi_service = new VkApi();
             var service = new ServiceCollection();
             service.AddAudioBypass();
+            vkapi_main = new VkApi();
+            vkapi_service = new VkApi();
             private_vkapi = new VkApi(service);
             yandex_api = new YandexMusicApi();
         }
@@ -333,8 +333,9 @@ namespace Freetime_Planner
             Console.Beep();
             WritelnColor("Включаю режим отслеживания...", ConsoleColor.White);
             var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
-
+            Key = response.Key;
             Ts = response.Ts;
+            Server = response.Server;
             //Eye();
             EyeAsync();
             WritelnColor("Запросов в секунду доступно: " + vkapi_main.RequestsPerSecond, ConsoleColor.White);
@@ -397,15 +398,17 @@ namespace Freetime_Planner
          3. Передается сообщение пользователя в командный центр
         */
         #region Watcher
+        static string Key;
         static string Ts;
-        static ulong? Pts;
+        static string Server;
+        /*static ulong? Pts;
         static bool IsActive;
         static Timer WatchTimer = null;
         static byte MaxSleepSteps = 3;
         static int StepSleepTime = 333;
         static byte CurrentSleepSteps = 1;
         delegate void MessagesRecievedDelegate(VkApi owner, ReadOnlyCollection<VkNet.Model.Message> messages);
-        static event MessagesRecievedDelegate NewMessages;
+        static event MessagesRecievedDelegate NewMessages;*/
 
         static async void EyeAsync()
         {
@@ -418,15 +421,14 @@ namespace Freetime_Planner
             {
                 try
                 {
-                    var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
+                    //var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
                     var history = vkapi_main.Groups.GetBotsLongPollHistory(new BotsLongPollHistoryParams
                     {
-                        Key = response.Key,
+                        Key = Key,
                         Ts = Ts,
-                        Server = response.Server,
+                        Server = Server,
                         Wait = 0
                     });
-                    //Pts = response.Pts;
                     Ts = history.Ts;
                     if (history == null || history.Updates.Count() == 0)
                         continue;
@@ -442,7 +444,10 @@ namespace Freetime_Planner
                 }
                 catch (Exception)
                 {
-                    Thread.Sleep(1000);
+                    var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
+                    Key = response.Key;
+                    Ts = response.Ts;
+                    Server = response.Server;
                 }
             }
         }
@@ -810,8 +815,8 @@ namespace Freetime_Planner
                                 case Actors:
                                     SendMessage(user, "Формирую список актеров...");
                                     vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
-                                    var filmmetod = Film.Methods.ActorMessage(p.filmId);
-                                    if (filmmetod == null)
+                                    MessageTemplate filmmetod = null;
+                                    if (!user.GetFilmActors(p.filmId, ref filmmetod))
                                         SendMessage(user, "К сожалению, для этого сериала я не смог ничего найти... 😔");
                                     else
                                         SendMessage(user, "Результаты поиска", null, filmmetod);
@@ -885,6 +890,7 @@ namespace Freetime_Planner
                                 case More:
                                     SendMessage(user, "Готовлю детали по фильму...");
                                     vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
+                                    user.AddFilmActorsAsync(p.filmId);
                                     if (user.FilmRecommendations.TryGetValue(int.Parse(p.filmId), out Film.FilmObject film))
                                     {
                                         if (film.data.nameEn != null)
@@ -900,7 +906,7 @@ namespace Freetime_Planner
                                             new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()) });
                                     }
                                     else
-                                    {
+                                    { 
                                         var answer = Film.Methods.FullInfo(user, int.Parse(p.filmId), out var k, out var a);
                                         SendMessage(user, answer, k, null, a);
                                         //attachments и keyboard присваиваются внутри функции FullInfo
@@ -946,6 +952,7 @@ namespace Freetime_Planner
                                     }
                                     else
                                         SendMessage(user, "К сожалению, я не смог найти места для просмотра... 😔");
+                                    user.RemoveLevel();
                                     break;
 
                                 default:
@@ -1076,8 +1083,8 @@ namespace Freetime_Planner
                                 case Actors:
                                     SendMessage(user, "Формирую список актеров...");
                                     vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
-                                    var tvmetod = TV.Methods.ActorMessage(p.filmId);
-                                    if (tvmetod == null)
+                                    MessageTemplate tvmetod = null;
+                                    if (!user.GetTVActors(p.filmId, ref tvmetod))
                                         SendMessage(user, "К сожалению, для этого сериала я не смог ничего найти... 😔");
                                     else 
                                         SendMessage(user, "Результаты поиска", null, tvmetod);
@@ -1152,6 +1159,7 @@ namespace Freetime_Planner
                                 case More:
                                     SendMessage(user, "Готовлю детали по сериалу...");
                                     vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
+                                    user.AddTVActorsAsync(p.filmId);
                                     if (user.TVRecommendations.TryGetValue(int.Parse(p.filmId), out TV.TVObject tv))
                                     {
                                         if (tv.data.nameEn != null)
@@ -1778,6 +1786,12 @@ namespace Freetime_Planner
                     foreach (var elem in u.TVTracks)
                         if (DateTime.Now.CompareTo(elem.Value.DownloadTime.AddMinutes(10)) > 0)
                             u.TVTracks.Remove(elem.Key);
+                    foreach (var elem in u.FilmActors)
+                        if (DateTime.Now.CompareTo(elem.Value.DownloadTime.AddMinutes(10)) > 0)
+                            u.FilmActors.Remove(elem.Key);
+                    foreach (var elem in u.TVActors)
+                        if (DateTime.Now.CompareTo(elem.Value.DownloadTime.AddMinutes(10)) > 0)
+                            u.FilmActors.Remove(elem.Key);
                     Users.Unload();
                 }
             }
