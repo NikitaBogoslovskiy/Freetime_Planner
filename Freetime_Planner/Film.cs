@@ -454,6 +454,8 @@ namespace Freetime_Planner
         /// </summary>
         public static class Methods
         {
+            
+
             public static MessageTemplate ActorMessage(string filmID)
             {
                 var proverka = Film.Methods.Actors(filmID);

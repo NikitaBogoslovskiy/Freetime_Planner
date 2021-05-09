@@ -85,17 +85,16 @@ namespace Freetime_Planner
 
             var result = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             result.Clear();
-            //"Поиск по названию"
-            result.AddButton("Поиск по названию", "Command", Primary, "text");
+            //"Поиск По названию и По жанрам"
+            result.AddButton("По названию", "Command", Primary, "text");
+            result.AddButton("По жанру", "Command", Primary, "text");
             result.AddLine();
-            //"Мои рекомендации"
-            result.AddButton("Мои рекомендации", "Command", Primary, "text");
-            result.AddLine();
-            //"Планирую посмотреть"
-            result.AddButton("Планирую посмотреть", "Command", Primary, "text");
+            //"Рекомендованно и В планах"
+            result.AddButton("Рекомендовано", "Command", Primary, "text");
+            result.AddButton("Запланировано", "Command", Primary, "text");                                
             result.AddLine();
             //"Рандомный фильм"
-            result.AddButton("Рандомный фильм", "Command", Primary, "text");
+            result.AddButton("Случайный фильм", "Command", Primary, "text");
             result.AddLine();
             //"Назад"
             result.AddButton("Помощь", "Command", Positive, "text");
@@ -104,6 +103,7 @@ namespace Freetime_Planner
             return result.Build();
 
         }
+        
 
         /// <summary>
         /// Создаёт клавиатуру в сообщении для кнопоки "Фильмы"->"Поиск по названию"  
@@ -135,6 +135,33 @@ namespace Freetime_Planner
 
             button.SetInline();
             return button.Build();
+        }
+
+        public static MessageKeyboard SearchGenreList()
+        {
+            var result = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            result.Clear();
+
+            result.AddButton("Фантастика", $"f;;;;;;", Primary,"text");
+            result.AddButton("Детектив", $"f;;;;;;", Primary, "text");
+            result.AddButton("Боевик", $"f;;;;;;", Primary, "text");
+            result.AddLine();
+            result.AddButton("Комедия", $"f;;;;;;", Primary, "text");
+            result.AddButton("Аниме", $"f;;;;;;", Primary, "text");
+            result.AddButton("Фэнтэзи", $"f;;;;;;", Primary, "text");
+            result.AddLine();
+            result.AddButton("Драма", $"f;;;;;;", Primary, "text");
+            result.AddButton("Военный", $"f;;;;;;", Primary, "text");
+            result.AddButton("Триллер", $"f;;;;;;", Primary, "text");
+            result.AddLine();
+            result.AddButton("Криминал", $"f;;;;;;", Primary, "text");
+            result.AddButton("Семейный", $"f;;;;;;", Primary, "text");
+            result.AddButton("Ужасы", $"f;;;;;;", Primary, "text");
+
+            result.AddLine();
+            result.AddButton("Назад", "Command", Negative, "text");
+            //result.SetInline();
+            return result.Build();
         }
 
         //"Фильмы"->"Мои рекомендации"
@@ -625,25 +652,24 @@ namespace Freetime_Planner
         /// <button></button>
         public static MessageKeyboard TV()
         {
-            var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
-            button.Clear();
+            var result = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+            result.Clear();
+            //"Поиск По названию и По жанрам"
+            result.AddButton("По названию", "Command", Primary, "text");
+            result.AddButton("По жанру", "Command", Primary, "text");
+            result.AddLine();
+            //"Рекомендованно и В планах"
+            result.AddButton("Рекомендовано", "Command", Primary, "text");
+            result.AddButton("Запланировано", "Command", Primary, "text");
+            result.AddLine();
+            //"Рандомный фильм"
+            result.AddButton("Случайный сериал", "Command", Primary, "text");
+            result.AddLine();
+            //"Назад"
+            result.AddButton("Помощь", "Command", Positive, "text");
+            result.AddButton("Назад", "Command", Negative, "text");
 
-            button.AddButton("Поиск по названию", "Command", Primary, "text");
-            button.AddLine();
-
-            button.AddButton("Мои рекомендации", "Command", Primary, "text");
-            button.AddLine();
-
-            button.AddButton("Планирую посмотреть", "Command", Primary, "text");
-            button.AddLine();
-
-            button.AddButton("Рандомный сериал", "Command", Primary, "text");
-            button.AddLine();
-
-            button.AddButton("Помощь", "Command", Positive, "text");
-            button.AddButton("Назад", "Command", Negative, "text");
-
-            return button.Build();
+            return result.Build();
         }
 
         /// <summary>

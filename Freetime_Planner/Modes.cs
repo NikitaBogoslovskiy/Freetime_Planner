@@ -10,7 +10,10 @@ namespace Freetime_Planner
         {
             Default, Film, TV, Food, Search, Recommendations, PlanToWatch, Random, Dessert,
             Snack, Cocktails, WantToWatch, Watched, Soundtrack, GenreFood, BlackList, More, AlreadyWatched, Yes, No, Back, Help, WhereToWatch, Options,
-            MailFrequency, Everyday, ThreeDays, FiveDays, EveryWeek, NoMail, DietMode, NoLimit, HealthyFood, Actors, MoreAboutActor
+            MailFrequency, Everyday, ThreeDays, FiveDays, EveryWeek, NoMail, DietMode, NoLimit, HealthyFood, Actors, MoreAboutActor, SearchGenre,
+            GenreFiction, GenreThriller, GenreComedy, GenreAnime, GenreDrama, GenreMilitary, GenreFamily, GenreHoror, GenreDetective, GenreCriminal, 
+            GenreFantasy, GenreAdventure, GenreBoevik
+
         }
 
         /// <summary>
@@ -40,11 +43,23 @@ namespace Freetime_Planner
         {
             switch (message)
             {
-                case "Поиск по названию": return Mode.Search;
-                case "Мои рекомендации": return Mode.Recommendations;
-                case "Планирую посмотреть": return Mode.PlanToWatch;
-                case "Рандомный фильм": return Mode.Random;
-                case "Рандомный сериал": return Mode.Random;
+                case "Триллер": return Mode.GenreThriller;
+                case "Фэнтэзи": return Mode.GenreFantasy;
+                case "Криминал": return Mode.GenreCriminal;
+                case "Детектив": return Mode.GenreDetective;
+                case "Фантастика": return Mode.GenreFiction;
+                case "Боевик": return Mode.GenreBoevik;
+                case "Комедия": return Mode.GenreComedy;
+                case "Аниме": return Mode.GenreAnime;
+                case "Драма":return Mode.GenreDrama;
+                case "Военный": return Mode.GenreMilitary;
+                case "Семейный": return Mode.GenreFamily;
+                case "Ужасы": return Mode.GenreHoror;
+                case "По названию": return Mode.Search;
+                case "Рекомендовано": return Mode.Recommendations;
+                case "Запланировано": return Mode.PlanToWatch;
+                case "Случайный фильм": return Mode.Random;
+                case "Случайный сериал": return Mode.Random;
                 case "Сладкое": return Mode.Dessert;
                 case "Закуски": return Mode.Snack;
                 case "Коктейли": return Mode.Cocktails;
@@ -71,6 +86,7 @@ namespace Freetime_Planner
                 case "Режим диеты": return Mode.DietMode;
                 case "Без ограничений": return Mode.NoLimit;
                 case "Здоровое питание": return Mode.HealthyFood;
+                case "По жанру": return Mode.SearchGenre;
                 default: throw new ArgumentException("Нажимай кнопки в меню");
             }
         }
