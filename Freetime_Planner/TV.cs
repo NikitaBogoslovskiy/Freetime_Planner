@@ -24,6 +24,8 @@ namespace Freetime_Planner
         public static Dictionary<int, TVObject> PopularTV { get; set; }
         public static string PopularTVPath;
         public static DateTime LastPopularTVUpdate { get; set; }
+        public static Dictionary<string, List<RandomTV.Film>> GenreTV = new Dictionary<string, List<RandomTV.Film>>();
+        public static string GenreTVPath;
 
         /// <summary>
         /// Загружает список популярных сериалов из json-файла в поле PopularTV. Если такого json-файла нет, то создает и выгружает список
@@ -53,10 +55,34 @@ namespace Freetime_Planner
             }
         }
 
+        public static void UploadGenreTV()
+        {
+            if (!File.Exists(GenreTVPath))
+            {
+                UpdateGenreTV();
+                UnloadGenreTV();
+                return;
+            }
+            else
+            {
+                try
+                {
+                    GenreTV = JsonConvert.DeserializeObject<Dictionary<string, List<RandomTV.Film>>>(File.ReadAllText(GenreTVPath));
+                }
+                catch (Exception)
+                {
+                    UpdateGenreTV();
+                    UnloadGenreTV();
+                }
+            }
+        }
+
         /// <summary>
         /// Выгружает список популярных сериалов из PopularTV в json-файл
         /// </summary>
         public static void UnloadPopularTV() => File.WriteAllText(PopularTVPath, JsonConvert.SerializeObject(new KeyValuePair<DateTime, Dictionary<int, TVObject>>(LastPopularTVUpdate, PopularTV)));
+
+        public static void UnloadGenreTV() => File.WriteAllText(GenreTVPath, JsonConvert.SerializeObject(GenreTV));
 
         /// <summary>
         /// Обновляет список популярных сериалов
@@ -140,6 +166,49 @@ namespace Freetime_Planner
                 }
             }
             PopularTV = res;
+        }
+
+        public static void UpdateGenreTV()
+        {/*
+            var dict = new Dictionary<string, List<RandomTV.Film>>();
+            foreach (var pair in Film.GenresConverts)
+            {
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                var l = new List<RandomTV.Film>();
+                Random random = new Random();
+                while (true)
+                {
+                    var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                    var request = new RestRequest(Method.GET);
+                    request.AddHeader("X-API-KEY", Bot._kp_key);
+                    request.AddQueryParameter("type", "TV_SHOW");
+                    request.AddQueryParameter("order", order[random.Next(0, 2)]);
+                    request.AddQueryParameter("genre", pair.Value.ToString());
+                    int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 20);
+                    int filmYearUpperLine = random.Next(filmYearBottomLine + 20, DateTime.Now.Year + 1);
+                    request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                    request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                    IRestResponse response = client.Execute(request);
+                    RandomTV.Results results;
+                    try { results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content); }
+                    catch (Exception) { results = null; }
+                    if (results == null || results.films.Count == 0)
+                        continue;
+                    for (int i = 0; i < Math.Min(results.films.Count, 5); ++i)
+                    {
+                        var t = results.films[i];
+                        string photoID2;
+                        t.VKPhotoID = Attachments.RandomTVPosterID(t, out photoID2);
+                        t.VKPhotoID_2 = photoID2;
+                        if (t.VKPhotoID == null || t.VKPhotoID_2 == null)
+                            continue;
+                        l.Add(t);
+                    }
+                    dict[pair.Key] = l;
+                    break;
+                }
+            }
+            GenreFilms = dict;*/
         }
         #endregion
 
@@ -333,7 +402,7 @@ namespace Freetime_Planner
             {
                 var proverka = Film.Methods.Actors(filmID);
                 if (proverka != null)
-                    return Keyboards.ActorResultsTV(Film.Methods.Actors(filmID).Take(Math.Min(5, proverka.Count)));
+                    return Keyboards.ActorResultsTV(proverka.Take(Math.Min(5, proverka.Count)));
                 else return null;
             }
 
@@ -345,7 +414,7 @@ namespace Freetime_Planner
                 attachments = new List<MediaAttachment> { Attachments.PosterObject(user, ActInf.posterUrl, personId) };
                 string ActorInfoObj = "";
                 if (ActInf.hasAwards == 1)
-                    ActorInfoObj = "🏆";
+                    ActorInfoObj = "🏆 ";
                 if (ActInf.nameRu == null || ActInf.nameRu == string.Empty)
                     ActorInfoObj += ActInf.nameEn + "\n";
                 else if (ActInf.nameEn == null || ActInf.nameEn == string.Empty)
@@ -535,9 +604,9 @@ namespace Freetime_Planner
                 string[] song_names;
                 try
                 {
-                    //song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{TVName} {addition}"), count.ToString()).ToArray();
-                    var tracks = yandex_api.GetAlbum(yandex_api.SearchAlbums($"{TVName} {addition}")[0].Id).Volumes[0];
-                    song_names = tracks.Take(Math.Min(count, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
+                    song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{TVName} {addition}"), count.ToString()).ToArray();
+                    //var tracks = yandex_api.GetAlbum(yandex_api.SearchAlbums($"{TVName} {addition}")[0].Id).Volumes[0];
+                    //song_names = tracks.Take(Math.Min(count, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
                     for (int i = 0; i < song_names.Length; ++i)
                     {
                         var collection = private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams

@@ -28,6 +28,8 @@ namespace Freetime_Planner
         public static MessageKeyboard TVKeyboard { get; private set; }
         public static MessageKeyboard FoodKeyboard { get; private set; }
 
+        public static MessageKeyboard GenresKeyboard { get; private set; }
+
         /// <summary>
         /// Клавиатура главного меню
         /// </summary>
@@ -142,21 +144,21 @@ namespace Freetime_Planner
             var result = new VkNet.Model.Keyboard.KeyboardBuilder(false);
             result.Clear();
 
-            result.AddButton("Фантастика", $"f;;;;;;", Primary,"text");
-            result.AddButton("Детектив", $"f;;;;;;", Primary, "text");
-            result.AddButton("Боевик", $"f;;;;;;", Primary, "text");
+            result.AddButton("Фантастика", $"Command", Primary,"text");
+            result.AddButton("Детектив", $"Command", Primary, "text");
+            result.AddButton("Боевик", $"Command", Primary, "text");
             result.AddLine();
-            result.AddButton("Комедия", $"f;;;;;;", Primary, "text");
-            result.AddButton("Аниме", $"f;;;;;;", Primary, "text");
-            result.AddButton("Фэнтэзи", $"f;;;;;;", Primary, "text");
+            result.AddButton("Комедия", $"Command", Primary, "text");
+            result.AddButton("Аниме", $"Command", Primary, "text");
+            result.AddButton("Фэнтези", $"Command", Primary, "text");
             result.AddLine();
-            result.AddButton("Драма", $"f;;;;;;", Primary, "text");
-            result.AddButton("Военный", $"f;;;;;;", Primary, "text");
-            result.AddButton("Триллер", $"f;;;;;;", Primary, "text");
+            result.AddButton("Драма", $"Command", Primary, "text");
+            result.AddButton("Военный", $"Command", Primary, "text");
+            result.AddButton("Триллер", $"Command", Primary, "text");
             result.AddLine();
-            result.AddButton("Криминал", $"f;;;;;;", Primary, "text");
-            result.AddButton("Семейный", $"f;;;;;;", Primary, "text");
-            result.AddButton("Ужасы", $"f;;;;;;", Primary, "text");
+            result.AddButton("Криминал", $"Command", Primary, "text");
+            result.AddButton("Семейный", $"Command", Primary, "text");
+            result.AddButton("Ужасы", $"Command", Primary, "text");
 
             result.AddLine();
             result.AddButton("Назад", "Command", Negative, "text");
@@ -1140,6 +1142,7 @@ namespace Freetime_Planner
             FilmKeyboard = Film();
             TVKeyboard = TV();
             FoodKeyboard = Food();
+            GenresKeyboard = SearchGenreList();
         }
 
     }

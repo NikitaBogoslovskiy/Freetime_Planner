@@ -78,6 +78,7 @@ namespace Freetime_Planner
         public Dictionary<string, string> LastFood { get; set; }
         public string LastGenreFood { get; set; }
         public bool OnlyHealthyFood { get; set; }
+        public Dictionary<string, List<RandomFilms.Film>> GenreFilms { get; set; }
 
         /// <summary>
         /// Конструктор пользователя
@@ -118,6 +119,7 @@ namespace Freetime_Planner
                 ["Snack"] = ""
             };
             OnlyHealthyFood = false;
+            GenreFilms = Film.GenreFilms;
         }
 
         /// <summary>
@@ -228,6 +230,12 @@ namespace Freetime_Planner
             if (FilmRandomDict == null || FilmRandomDict.Count == 0)
                 FilmRandomDict = Film.RandomFilms;
             Keyboards.FilmMyRandomMessage(user,FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+        }
+
+        public MessageTemplate GetGenreFilms(string genre)
+        {
+            UpdateGenreFilmsAsync(genre);
+            return Keyboards.RandomFilmResults(GenreFilms[genre].Shuffle().Take(Math.Min(3, GenreFilms[genre].Count)));
         }
 
 
@@ -505,21 +513,21 @@ namespace Freetime_Planner
                 request.AddHeader("X-API-KEY", Bot._kp_key);
                 request.AddQueryParameter("type", "FILM");
                 request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
-                int opt = random.Next(0, 2);
-                if (opt == 0)
+                //int opt = random.Next(0, 2);
+                /*if (opt == 0)
                     request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
                 else
-                {
+                {*/
                     int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 10);
                     int filmYearUpperLine = random.Next(filmYearBottomLine + 10, DateTime.Now.Year + 1);
                     request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
                     request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
-                }
+                //}
                 IRestResponse response = client.Execute(request);
                 RandomFilms.Results results;
                 try { results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content); }
                 catch(Exception) { results = null; }
-                if (results == null && results.films.Count == 0)
+                if (results == null || results.films.Count == 0)
                     continue;
                 for (int i = 0; i < results.films.Count; ++i)
                 {
@@ -538,6 +546,49 @@ namespace Freetime_Planner
             }
         }
 
+        private async void UpdateGenreFilmsAsync(string genre)
+        {
+            await Task.Run(() => UpdateGenreFilms(genre));
+        }
+
+        private void UpdateGenreFilms(string genre)
+        {
+            string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+            var l = new List<RandomFilms.Film>();
+            Random random = new Random();
+            while (true)
+            {
+                var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                request.AddQueryParameter("type", "FILM");
+                request.AddQueryParameter("order", order[random.Next(0, 2)]);
+                request.AddQueryParameter("genre", Film.GenresConverts[genre].ToString());
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 15);
+                int filmYearUpperLine = random.Next(filmYearBottomLine + 15, DateTime.Now.Year + 1);
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                IRestResponse response = client.Execute(request);
+                RandomFilms.Results results;
+                try { results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content); }
+                catch (Exception) { results = null; }
+                if (results == null || results.films.Count == 0)
+                    continue;
+                for (int i = 0; i < Math.Min(results.films.Count, 5); ++i)
+                {
+                    var t = results.films[i];
+                    string photoID2;
+                    t.VKPhotoID = Attachments.RandomFilmPosterID(t, out photoID2);
+                    t.VKPhotoID_2 = photoID2;
+                    if (t.VKPhotoID == null || t.VKPhotoID_2 == null)
+                        continue;
+                    l.Add(t);
+                }
+                GenreFilms[genre] = l;
+                return;
+            }
+        }
+
         public async void AddFilmSoundtrackAsync(string name, string addition)
         {
             await Task.Run(() => AddFilmSoundtrack(name, addition));
@@ -549,9 +600,9 @@ namespace Freetime_Planner
             var res = new FilmSountracks();
             try
             {
-                //song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
-                var tracks = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{name} {addition}")[0].Id).Volumes[0];
-                song_names = tracks.Take(Math.Min(6, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
+                song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
+                //var tracks = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{name} {addition}")[0].Id).Volumes[0];
+                //song_names = tracks.Take(Math.Min(6, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
                 var audios = new List<Audio>();
                 for (int i = 0; i < song_names.Length; ++i)
                 {
@@ -812,16 +863,16 @@ namespace Freetime_Planner
                 request.AddHeader("X-API-KEY", Bot._kp_key);
                 request.AddQueryParameter("type", "TV_SHOW");
                 request.AddQueryParameter("order", order[random.Next(0, order.Length)]);
-                int opt = random.Next(0, 2);
+                /*int opt = random.Next(0, 2);
                 if (opt == 0)
                     request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
                 else
-                {
+                {*/
                     int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 10);
                     int filmYearUpperLine = random.Next(filmYearBottomLine + 10, DateTime.Now.Year + 1);
                     request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
                     request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
-                }
+                //}
                 IRestResponse response = client.Execute(request);
                 RandomTV.Results results;
                 try { results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content); }
@@ -854,9 +905,9 @@ namespace Freetime_Planner
             var res = new FilmSountracks();
             try
             {
-                //song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
-                var tracks = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{name} {addition}")[0].Id).Volumes[0];
-                song_names = tracks.Take(Math.Min(6, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
+                song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
+                //var tracks = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{name} {addition}")[0].Id).Volumes[0];
+                //song_names = tracks.Take(Math.Min(6, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
                 var audios = new List<Audio>();
                 for (int i = 0; i < song_names.Length; ++i)
                 {

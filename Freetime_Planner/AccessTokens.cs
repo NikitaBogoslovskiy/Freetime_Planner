@@ -53,6 +53,8 @@ namespace Freetime_Planner
             Food.GenreFoodPath = Bot.directory + "/GenreFood.txt";
             Food.GenreHealthyFoodPath = Bot.directory + "/GenreHealthyFood.txt";
             Attachments.DefaultPosterPath = Bot.directory + "/DefaultPoster.jpg";
+            Film.GenreFilmsPath = Bot.directory + "/GenreFilms.json";
+            TV.GenreTVPath = Bot.directory + "/GenreTV.json";
             Bot.MainHelp = File.ReadAllText(Bot.directory + "/MainHelp.txt");
             Bot.FilmHelp = File.ReadAllText(Bot.directory + "/FilmHelp.txt");
             Bot.TVHelp = File.ReadAllText(Bot.directory + "/TVHelp.txt");

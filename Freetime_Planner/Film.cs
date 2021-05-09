@@ -28,6 +28,21 @@ namespace Freetime_Planner
     public static class Film
     {
         public static int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
+        public static Dictionary<string, int> GenresConverts = new Dictionary<string, int>
+        {
+            ["Фантастика"] = 2,
+            ["Детектив"] = 17,
+            ["Боевик"] = 3,
+            ["Комедия"] = 6,
+            ["Аниме"] = 1750,
+            ["Фэнтези"] = 5,
+            ["Драма"] = 8,
+            ["Военный"] = 19,
+            ["Триллер"] = 4,
+            ["Криминал"] = 16,
+            ["Семейный"] = 11,
+            ["Ужасы"] = 1
+        };
 
         //Популярные фильмы
         #region PopularFilms
@@ -36,6 +51,8 @@ namespace Freetime_Planner
         public static DateTime LastPopularFilmsUpdate { get; set; }
         public static Queue<Mailing.MailObject> PopularFilmsQueue { get; set; }
         public static string PopularFilmsQueuePath;
+        public static Dictionary<string, List<RandomFilms.Film>> GenreFilms = new Dictionary<string, List<RandomFilms.Film>>();
+        public static string GenreFilmsPath;
         /// <summary>
         /// Загружает список популярных фильмов из json-файла в поле PopularFilms. Если такого json-файла нет, то создает и выгружает список
         /// </summary>
@@ -84,12 +101,36 @@ namespace Freetime_Planner
                 }
             }
         }
+
+        public static void UploadGenreFilms()
+        {
+            if (!File.Exists(GenreFilmsPath))
+            {
+                UpdateGenreFilms();
+                UnloadGenreFilms();
+                return;
+            }
+            else
+            {
+                try
+                {
+                    GenreFilms = JsonConvert.DeserializeObject<Dictionary<string, List<RandomFilms.Film>>>(File.ReadAllText(GenreFilmsPath));
+                }
+                catch (Exception)
+                {
+                    UpdateGenreFilms();
+                    UnloadGenreFilms();
+                }
+            }
+        }
         /// <summary>
         /// Выгружает список популярных фильмов из PopularFilms в json-файл
         /// </summary>
         public static void UnloadPopularFilms() => File.WriteAllText(PopularFilmsPath, JsonConvert.SerializeObject(new KeyValuePair<DateTime, Dictionary<int, FilmObject>>(LastPopularFilmsUpdate, PopularFilms)));
 
         public static void UnloadPopularFilmsQueue() => File.WriteAllText(PopularFilmsQueuePath, JsonConvert.SerializeObject(PopularFilmsQueue));
+
+        public static void UnloadGenreFilms() => File.WriteAllText(GenreFilmsPath, JsonConvert.SerializeObject(GenreFilms));
         /// <summary>
         /// Обновляет список популярных фильмов
         /// </summary>
@@ -196,6 +237,49 @@ namespace Freetime_Planner
                 }
             }
             PopularFilmsQueue = q;
+        }
+
+        public static void UpdateGenreFilms()
+        {
+            var dict = new Dictionary<string, List<RandomFilms.Film>>();
+            foreach (var pair in GenresConverts)
+            {
+                string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
+                var l = new List<RandomFilms.Film>();
+                Random random = new Random();
+                while (true)
+                {
+                    var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
+                    var request = new RestRequest(Method.GET);
+                    request.AddHeader("X-API-KEY", Bot._kp_key);
+                    request.AddQueryParameter("type", "FILM");
+                    request.AddQueryParameter("order", order[random.Next(0, 2)]);
+                    request.AddQueryParameter("genre", pair.Value.ToString());
+                    int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 15);
+                    int filmYearUpperLine = random.Next(filmYearBottomLine + 15, DateTime.Now.Year + 1);
+                    request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                    request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                    IRestResponse response = client.Execute(request);
+                    RandomFilms.Results results;
+                    try { results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content); }
+                    catch (Exception) { results = null; }
+                    if (results == null || results.films.Count == 0)
+                        continue;
+                    for (int i = 0; i < Math.Min(results.films.Count, 5); ++i)
+                    {
+                        var t = results.films[i];
+                        string photoID2;
+                        t.VKPhotoID = Attachments.RandomFilmPosterID(t, out photoID2);
+                        t.VKPhotoID_2 = photoID2;
+                        if (t.VKPhotoID == null || t.VKPhotoID_2 == null)
+                            continue;
+                        l.Add(t);
+                    }
+                    dict[pair.Key] = l;
+                    break;
+                }
+            }
+            GenreFilms = dict;
         }
         #endregion
 
@@ -466,7 +550,7 @@ namespace Freetime_Planner
             {
                 var proverka = Film.Methods.Actors(filmID);
                 if (proverka != null)
-                    return Keyboards.ActorResults(Film.Methods.Actors(filmID).Take(Math.Min(5,proverka.Count)));
+                    return Keyboards.ActorResults(proverka.Take(Math.Min(5,proverka.Count)));
                 else return null;
             }
 
@@ -478,7 +562,7 @@ namespace Freetime_Planner
                 attachments = new List<MediaAttachment> { Attachments.PosterObject(user, ActInf.posterUrl, personId) };
                 string ActorInfoObj ="";
                 if(ActInf.hasAwards == 1)
-                    ActorInfoObj = "🏆";
+                    ActorInfoObj = "🏆 ";
                 if (ActInf.nameRu == null || ActInf.nameRu == string.Empty)
                     ActorInfoObj += ActInf.nameEn + "\n";
                 else if (ActInf.nameEn == null || ActInf.nameEn == string.Empty)
@@ -746,9 +830,9 @@ namespace Freetime_Planner
                 string[] song_names;
                 try
                 {
-                    //song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{filmName} {addition}"), count.ToString()).ToArray();
-                    var tracks = yandex_api.GetAlbum(yandex_api.SearchAlbums($"{filmName} {addition}")[0].Id).Volumes[0];
-                    song_names = tracks.Take(Math.Min(count, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
+                    song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{filmName} {addition}"), count.ToString()).ToArray();
+                    //var tracks = yandex_api.GetAlbum(yandex_api.SearchAlbums($"{filmName} {addition}")[0].Id).Volumes[0];
+                    //song_names = tracks.Take(Math.Min(count, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
                     for (int i = 0; i < song_names.Length; ++i)
                     {
                         var collection = Bot.private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
