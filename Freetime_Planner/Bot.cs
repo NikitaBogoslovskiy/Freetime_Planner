@@ -600,7 +600,7 @@ namespace Freetime_Planner
                 {
                     var message = messages[i];
                     VkNet.Model.User Sender = vkapi.Users.Get(new long[] { message.PeerId.Value }, ProfileFields.Online)[0];
-                    bool? IsMobileVersion = true;
+                    bool? IsMobileVersion = false;
                     var user = Users.GetUser(Sender, out bool IsOld);
                     if (message.Attachments.Count != 0)
                     {
@@ -962,7 +962,7 @@ namespace Freetime_Planner
                                     SendMessage(user,"Выбери жанр", Keyboards.SearchGenreList(), null,null);
                                     break;
 
-                                //"Мои рекомендации"
+                                //"Мои рекомендации"-------------------------------------------
                                 case Recommendations:
                                     SendMessage(user, "Составляю список рекомендаций...");
                                     //vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
@@ -991,7 +991,7 @@ namespace Freetime_Planner
                                     user.RemoveLevel();
                                     break;
 
-                                //"Рандомный фильм"
+                                //"Рандомный фильм"  ------------------------
                                 case Modes.Mode.Random:
                                     SendMessage(user, "Ищу случайные фильмы...");
                                     if (IsMobileVersion.HasValue && IsMobileVersion.Value)
@@ -1004,8 +1004,8 @@ namespace Freetime_Planner
                                     }
                                     else
                                     {
-                                        vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
-                                        Film.Methods.Random_inMessage(user); //отправка сообщения внутри
+                                        vkapi.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id.ToString()));
+                                        user.RandomFilmsMessage(user); //отправка сообщения внутри
                                         //attachments = null;
                                         //keyboard = null;
                                     }

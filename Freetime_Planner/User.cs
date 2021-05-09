@@ -217,8 +217,19 @@ namespace Freetime_Planner
                 FilmRandomDict = Film.RandomFilms;
             return Keyboards.RandomFilmResults(FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
         }
-        
-     
+
+        public void RandomFilmsMessage(User user)
+        {
+            if (!RandomFilmsIsUpdating)
+            {
+                RandomFilmsIsUpdating = true;
+                UpdateFilmRandomAsync();
+            }
+            if (FilmRandomDict == null || FilmRandomDict.Count == 0)
+                FilmRandomDict = Film.RandomFilms;
+            Keyboards.FilmMyRandomMessage(user,FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+        }
+
 
         /// <summary>
         /// Возвращает список планируемых фильмов в текстовом виде (с разделением на вышедшие фильмы и те, что выйдут)
@@ -513,7 +524,9 @@ namespace Freetime_Planner
                 for (int i = 0; i < results.films.Count; ++i)
                 {
                     var t = results.films[i];
-                    t.VKPhotoID = Attachments.RandomFilmPosterID(t);
+                    string photoID2;
+                    t.VKPhotoID = Attachments.RandomFilmPosterID(t,out photoID2);
+                    t.VKPhotoID_2 = photoID2;
                     if (t.VKPhotoID == null)
                         continue;
                     dict[t.filmId] = t;

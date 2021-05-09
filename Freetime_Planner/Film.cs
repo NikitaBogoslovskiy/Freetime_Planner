@@ -164,9 +164,11 @@ namespace Freetime_Planner
                         if (film != null)
                         {
                             film.Priority = 1;
-                            film.data.VKPhotoID = Attachments.PopularFilmPosterID(film);
+                            string photoID2;
+                            film.data.VKPhotoID = Attachments.PopularFilmPosterID(film, out photoID2);
+                            film.data.VKPhotoID_2 = photoID2;
                             //проверка валидности загруженной фотографии
-                            if (film.data.VKPhotoID != null)
+                            if (film.data.VKPhotoID != null && film.data.VKPhotoID_2!=null)
                                 res[id] = film;
                         }
                     }
@@ -262,8 +264,10 @@ namespace Freetime_Planner
                 var dict = new Dictionary<int, RandomFilms.Film>();
                 for (int i = 0; i < results.Count; ++i)
                 {
-                    results[i].VKPhotoID = Attachments.RandomFilmPosterID(results[i]);
-                    if (results[i].VKPhotoID == null)
+                    string photoID2;
+                    results[i].VKPhotoID = Attachments.RandomFilmPosterID(results[i], out photoID2);
+                    results[i].VKPhotoID_2 = photoID2;
+                    if (results[i].VKPhotoID == null && results[i].VKPhotoID_2 == null)
                         continue;
                     dict[results[i].filmId] = results[i];
                 }
@@ -324,6 +328,8 @@ namespace Freetime_Planner
             public List<string> facts { get; set; }
             public List<object> seasons { get; set; }
             public string VKPhotoID { get; set; }
+            public string VKPhotoID_2 { get; set; }
+
         }
 
         /// <summary>
@@ -726,7 +732,7 @@ namespace Freetime_Planner
                 RandomFilms.Results results;
                 try { results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content); }
                 catch(Exception) { results = null; }
-
+                
 
                 Keyboards.RandomFilmResultsMessage(user, results);
             }
@@ -970,6 +976,7 @@ namespace Freetime_Planner
             public string posterUrlPreview { get; set; }
             public string nameEn { get; set; }
             public string VKPhotoID { get; set; }
+            public string VKPhotoID_2 { get; set; }
         }
 
         public class Results
