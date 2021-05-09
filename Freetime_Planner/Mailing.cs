@@ -75,14 +75,14 @@ namespace Freetime_Planner
                         if (film.data.nameEn != null)
                         {
                             fname = film.data.nameEn;
-                            //addition = "ost";
+                            addition = "ost";
                         }
                         else
                         {
                             fname = film.data.nameRu;
-                            //addition = "саундтрек";
+                            addition = "саундтрек";
                         }
-                        addition = year;
+                        //addition = year;
                         Film.Methods.DownloadSoundtrack(fname, addition, soundtrack, 2);
                     }
                     else if (film.data.type == "TV_SHOW")
@@ -91,12 +91,12 @@ namespace Freetime_Planner
                         if (film.data.nameEn != null)
                         {
                             fname = film.data.nameEn;
-                            addition = "series";
+                            addition = "ost";
                         }
                         else
                         {
                             fname = film.data.nameRu;
-                            addition = "сериал";
+                            addition = "саундтрек";
                         }
                         //addition = year;
                         TV.Methods.DownloadSoundtrack(fname, addition, soundtrack, 2);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using VkNet.Model.Keyboard;
 
 namespace Freetime_Planner
 {
@@ -12,7 +13,7 @@ namespace Freetime_Planner
             Snack, Cocktails, WantToWatch, Watched, Soundtrack, GenreFood, BlackList, More, AlreadyWatched, Yes, No, Back, Help, WhereToWatch, Options,
             MailFrequency, Everyday, ThreeDays, FiveDays, EveryWeek, NoMail, DietMode, NoLimit, HealthyFood, Actors, MoreAboutActor, SearchGenre,
             GenreFiction, GenreThriller, GenreComedy, GenreAnime, GenreDrama, GenreMilitary, GenreFamily, GenreHoror, GenreDetective, GenreCriminal, 
-            GenreFantasy, GenreAdventure, GenreBoevik
+            GenreFantasy, GenreBoevik
 
         }
 
@@ -43,18 +44,6 @@ namespace Freetime_Planner
         {
             switch (message)
             {
-                case "Триллер": return Mode.GenreThriller;
-                case "Фэнтэзи": return Mode.GenreFantasy;
-                case "Криминал": return Mode.GenreCriminal;
-                case "Детектив": return Mode.GenreDetective;
-                case "Фантастика": return Mode.GenreFiction;
-                case "Боевик": return Mode.GenreBoevik;
-                case "Комедия": return Mode.GenreComedy;
-                case "Аниме": return Mode.GenreAnime;
-                case "Драма":return Mode.GenreDrama;
-                case "Военный": return Mode.GenreMilitary;
-                case "Семейный": return Mode.GenreFamily;
-                case "Ужасы": return Mode.GenreHoror;
                 case "По названию": return Mode.Search;
                 case "Рекомендовано": return Mode.Recommendations;
                 case "Запланировано": return Mode.PlanToWatch;
@@ -88,6 +77,41 @@ namespace Freetime_Planner
                 case "Здоровое питание": return Mode.HealthyFood;
                 case "По жанру": return Mode.SearchGenre;
                 default: throw new ArgumentException("Нажимай кнопки в меню");
+            }
+        }
+
+        public static Mode ThirdMenu(string message)
+        {
+            switch (message)
+            {
+                case "Триллер": return Mode.GenreThriller;
+                case "Фэнтези": return Mode.GenreFantasy;
+                case "Криминал": return Mode.GenreCriminal;
+                case "Детектив": return Mode.GenreDetective;
+                case "Фантастика": return Mode.GenreFiction;
+                case "Боевик": return Mode.GenreBoevik;
+                case "Комедия": return Mode.GenreComedy;
+                case "Аниме": return Mode.GenreAnime;
+                case "Драма": return Mode.GenreDrama;
+                case "Военный": return Mode.GenreMilitary;
+                case "Семейный": return Mode.GenreFamily;
+                case "Ужасы": return Mode.GenreHoror;
+                case "Назад": return Mode.Back;
+                default: throw new ArgumentException("Нажимай кнопки в меню");
+            }
+        }
+
+        public static MessageKeyboard LevelKeyboard(Mode m)
+        {
+            switch(m)
+            {
+                case Mode.Default: return Keyboards.MainKeyboard;
+                case Mode.Film: return Keyboards.FilmKeyboard;
+                case Mode.TV: return Keyboards.TVKeyboard;
+                case Mode.Food: return Keyboards.FoodKeyboard;
+                case Mode.Options: return Keyboards.Options();
+                case Mode.SearchGenre: return Keyboards.GenresKeyboard;
+                default: return null;
             }
         }
     }
