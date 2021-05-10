@@ -207,14 +207,20 @@ namespace Freetime_Planner
                         {
                             film.Priority = 1;
                             string photoID2;
-                            //Trailer
+
+                            //Video trailer = null;
+
                             film.data.VKPhotoID = Attachments.PopularFilmPosterID(film, out photoID2);
                             film.data.VKPhotoID_2 = photoID2;
-                            //wait
-                            //Film.TrailerInfo = ...
+
                             //проверка валидности загруженной фотографии
                             if (film.data.VKPhotoID != null && film.data.VKPhotoID_2 != null)
+                            {
+                                //FilmObject.GetTrailer(film.data.filmId, ref trailer);
+                                //film.TrailerInfo = trailer;
+
                                 res[id] = film;
+                            }
                         }
                     }
                 }
@@ -529,15 +535,14 @@ namespace Freetime_Planner
                 Trailer.Links.UnionWith(difference);
             }
 
-            //~~~~~~~~~~~~~~~~~~~
             public static void GetTrailer(int filmID, ref Video trailer)
             {
                 var client = new RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{filmID}/videos");
                 var request = new RestRequest(Method.GET);
                 request.AddHeader("X-API-KEY", Bot._kp_key);
                 IRestResponse response = client.Execute(request);
-                IEnumerable<Trailer> trailers;
-                try { trailers = JsonConvert.DeserializeObject<MovieVideos>(response.Content).trailers.Where(t => t.site.ToLower() == "youtube"); }
+                List<Trailer> trailers;
+                try { trailers = JsonConvert.DeserializeObject<MovieVideos>(response.Content).trailers.Where(t => t.site.ToLower() == "youtube").ToList(); }
                 catch (Exception)
                 {
                     trailer = null;
@@ -548,15 +553,15 @@ namespace Freetime_Planner
                     trailer = null;
                     return;
                 }
+                Random random = new Random();
                 trailer = Bot.private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
                 {
-                    Link = trailers.First().url
+                    Link = trailers[random.Next(0, trailers.Count)].url
                 });
 
                 var wc = new WebClient();
                 wc.DownloadString(trailer.UploadUrl);
             }
-            //~~~~~~~~~~~~~~~~~~~
         }
 
         public class NewTrailer
@@ -651,7 +656,7 @@ namespace Freetime_Planner
             /// </summary>
             /// <param name="filmID"></param>
             /// <returns></returns>
-            public static string FullInfo(User user, int filmID, out MessageKeyboard keyboard, out IEnumerable<MediaAttachment> attachments)
+            public static string FullInfo(User user, int filmID, out MessageKeyboard keyboard, out List<MediaAttachment> attachments)
             {
                 Video trailer = null;
                 var t = new Task(() => FilmObject.GetTrailer(filmID, ref trailer));
@@ -674,7 +679,9 @@ namespace Freetime_Planner
                     user.AddFilmSoundtrackAsync(film.data.nameRu, film.data.premiereWorld.Substring(0, 4));
                 var poster = Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString());
                 t.Wait();
-                attachments = new List<MediaAttachment> { poster, trailer };
+                attachments = new List<MediaAttachment> { poster };
+                if (trailer != null)
+                    attachments.Add(trailer);
 
                 keyboard = Keyboards.FilmSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), film.data.premiereRu ?? film.data.premiereWorld ?? film.data.year, string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereDigital ?? film.data.premiereDvd);
                 return FullInfo(film);
