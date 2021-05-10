@@ -917,7 +917,7 @@ namespace Freetime_Planner
                                             Film.Methods.FullInfo(film),
                                             Keyboards.FilmSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), film.data.premiereRu ?? film.data.premiereWorld ?? film.data.year, string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereDigital ?? film.data.premiereDvd),
                                             null,
-                                            new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()) });
+                                            new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()), film.TrailerInfo});
                                     }
                                     else
                                     { 
@@ -1194,7 +1194,7 @@ namespace Freetime_Planner
                                             TV.Methods.FullInfo(tv),
                                             Keyboards.TVSearch(tv.data.nameRu, tv.data.nameEn, tv.data.filmId.ToString(), string.Join("*", tv.data.genres.Select(g => g.genre)), tv.data.premiereRu),
                                             null,
-                                            new List<MediaAttachment> { Attachments.PosterObject(user, tv.data.posterUrl, tv.data.filmId.ToString()) });
+                                            new List<MediaAttachment> { Attachments.PosterObject(user, tv.data.posterUrl, tv.data.filmId.ToString()), tv.TrailerInfo });
                                     }
                                     else
                                     {

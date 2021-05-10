@@ -397,6 +397,7 @@ namespace Freetime_Planner
             public Budget budget { get; set; }
             public Rating rating { get; set; }
             public int Priority { get; set; }
+            public Video TrailerInfo { get; set; }
             public TVObject(string nameRu, string nameEn, int filmID)
             {
                 data = new Data

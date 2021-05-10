@@ -521,8 +521,11 @@ namespace Freetime_Planner
                             continue;
                         film.Priority = 2;
                         
+                        //trailer
                         film.data.VKPhotoID   = Attachments.RecommendedFilmPosterID(film, out var full_photo_ID);
                         film.data.VKPhotoID_2 = full_photo_ID ;
+                        //wait
+                        //trailerinfo = ...
                         //проверка валидности изображения
                         if (film.data.VKPhotoID != null && film.data.VKPhotoID_2 != null)
                         {

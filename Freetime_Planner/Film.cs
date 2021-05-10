@@ -19,6 +19,7 @@ using System.Text.RegularExpressions;
 using System.Net;
 using System.Security.Claims;
 using static System.Console;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Freetime_Planner
 {
@@ -72,7 +73,7 @@ namespace Freetime_Planner
                     LastPopularFilmsUpdate = pair.Key;
                     PopularFilms = pair.Value;
                 }
-                catch (Exception )
+                catch (Exception)
                 {
                     UpdatePopularFilms();
                     LastPopularFilmsUpdate = DateTime.Now;
@@ -146,7 +147,7 @@ namespace Freetime_Planner
             IRestResponse responseA = clientA.Execute(requestA);
             MDBResults deserializedA;
             try { deserializedA = JsonConvert.DeserializeObject<MDBResults>(responseA.Content); }
-            catch(Exception) { return; }
+            catch (Exception) { return; }
             if (deserializedA == null || deserializedA.total_pages == 0)
                 return;
             var list = deserializedA.results;
@@ -176,7 +177,7 @@ namespace Freetime_Planner
                 var KPresponse1 = KPclient1.Execute(KPrequest1);
                 FilmResults.Results deserialized;
                 try { deserialized = JsonConvert.DeserializeObject<FilmResults.Results>(KPresponse1.Content); }
-                catch(Exception) { deserialized = null; }
+                catch (Exception) { deserialized = null; }
 
                 //проверка успешности десериализации
                 if (deserialized != null && deserialized.pagesCount > 0)
@@ -201,15 +202,18 @@ namespace Freetime_Planner
                         var KPresponse2 = KPclient2.Execute(KPrequest2);
                         FilmObject film;
                         try { film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content); }
-                        catch(Exception) { film = null; }
+                        catch (Exception) { film = null; }
                         if (film != null)
                         {
                             film.Priority = 1;
                             string photoID2;
+                            //Trailer
                             film.data.VKPhotoID = Attachments.PopularFilmPosterID(film, out photoID2);
                             film.data.VKPhotoID_2 = photoID2;
+                            //wait
+                            //Film.TrailerInfo = ...
                             //проверка валидности загруженной фотографии
-                            if (film.data.VKPhotoID != null && film.data.VKPhotoID_2!=null)
+                            if (film.data.VKPhotoID != null && film.data.VKPhotoID_2 != null)
                                 res[id] = film;
                         }
                     }
@@ -341,7 +345,7 @@ namespace Freetime_Planner
                 IRestResponse response = client.Execute(request);
                 List<RandomFilms.Film> results;
                 try { results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content).films; }
-                catch(Exception) { continue; }
+                catch (Exception) { continue; }
                 if (results == null || results.Count == 0)
                     continue;
 
@@ -463,6 +467,7 @@ namespace Freetime_Planner
             public bool TwoWeeksNotification { get; set; }
             public bool PremiereNotification { get; set; }
             public NewTrailer Trailer { get; set; }
+            public Video TrailerInfo { get; set; }
 
             public FilmObject(string nameRu, string nameEn, string date, int filmID)
             {
@@ -489,7 +494,7 @@ namespace Freetime_Planner
                 IRestResponse response = client.Execute(request);
                 IEnumerable<Trailer> trailers;
                 try { trailers = JsonConvert.DeserializeObject<MovieVideos>(response.Content).trailers.Where(t => t.site.ToLower() == "youtube"); }
-                catch(Exception)
+                catch (Exception)
                 {
                     Trailer = new NewTrailer(new HashSet<string>());
                     Trailer.IsNew = false;
@@ -509,7 +514,7 @@ namespace Freetime_Planner
                 IRestResponse response = client.Execute(request);
                 IEnumerable<Trailer> trailers;
                 try { trailers = JsonConvert.DeserializeObject<MovieVideos>(response.Content).trailers.Where(t => t.site.ToLower() == "youtube"); }
-                catch(Exception) { return; }
+                catch (Exception) { return; }
                 var difference = trailers.Select(t => t.url).ToHashSet();
                 difference.SymmetricExceptWith(Trailer.Links);
                 if (difference.Count == 0)
@@ -523,6 +528,35 @@ namespace Freetime_Planner
                 Trailer.IsNew = true;
                 Trailer.Links.UnionWith(difference);
             }
+
+            //~~~~~~~~~~~~~~~~~~~
+            public static void GetTrailer(int filmID, ref Video trailer)
+            {
+                var client = new RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{filmID}/videos");
+                var request = new RestRequest(Method.GET);
+                request.AddHeader("X-API-KEY", Bot._kp_key);
+                IRestResponse response = client.Execute(request);
+                IEnumerable<Trailer> trailers;
+                try { trailers = JsonConvert.DeserializeObject<MovieVideos>(response.Content).trailers.Where(t => t.site.ToLower() == "youtube"); }
+                catch (Exception)
+                {
+                    trailer = null;
+                    return;
+                }
+                if ((trailers == null) || (trailers.Count() == 0))
+                {
+                    trailer = null;
+                    return;
+                }
+                trailer = Bot.private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
+                {
+                    Link = trailers.First().url
+                });
+
+                var wc = new WebClient();
+                wc.DownloadString(trailer.UploadUrl);
+            }
+            //~~~~~~~~~~~~~~~~~~~
         }
 
         public class NewTrailer
@@ -544,7 +578,7 @@ namespace Freetime_Planner
         /// </summary>
         public static class Methods
         {
-            
+
 
             /*public static MessageTemplate ActorMessage(string filmID)
             {
@@ -555,36 +589,35 @@ namespace Freetime_Planner
             }*/
 
 
-            public static string ActorDescriptionMessage(User user,string personId, out IEnumerable<MediaAttachment> attachments)
+            public static string ActorDescriptionMessage(User user, string personId, out IEnumerable<MediaAttachment> attachments)
             {
-
                 var ActInf = Film.Methods.ActorInfo(personId);
                 attachments = new List<MediaAttachment> { Attachments.PosterObject(user, ActInf.posterUrl, personId) };
-                string ActorInfoObj ="";
-                if(ActInf.hasAwards == 1)
+                string ActorInfoObj = "";
+                if (ActInf.hasAwards == 1)
                     ActorInfoObj = "🏆 ";
                 if (ActInf.nameRu == null || ActInf.nameRu == string.Empty)
                     ActorInfoObj += ActInf.nameEn + "\n";
                 else if (ActInf.nameEn == null || ActInf.nameEn == string.Empty)
-                      ActorInfoObj += ActInf.nameRu + "\n";
-                
-                else if(ActInf.nameRu != null && ActInf.nameEn != null && ActInf.nameRu!= string.Empty && ActInf.nameEn!= string.Empty)
-                      ActorInfoObj += ActInf.nameRu + "/" + ActInf.nameEn + "\n\n" ;
-                
-                if (ActInf.growth != null && ActInf.growth!="0")
+                    ActorInfoObj += ActInf.nameRu + "\n";
+
+                else if (ActInf.nameRu != null && ActInf.nameEn != null && ActInf.nameRu != string.Empty && ActInf.nameEn != string.Empty)
+                    ActorInfoObj += ActInf.nameRu + "/" + ActInf.nameEn + "\n\n";
+
+                if (ActInf.growth != null && ActInf.growth != "0")
                     ActorInfoObj += "🕺Рост: " + ActInf.growth + "\n";
                 if (ActInf.birthday != null && ActInf.birthday != string.Empty)
                     ActorInfoObj += "👶День рождения: " + Film.Methods.ChangeDateType(ActInf.birthday) + "\n";
-                if (ActInf.death != null && ActInf.death !=string.Empty)
-                    ActorInfoObj += "💀Дата смерти: " + Film.Methods.ChangeDateType(ActInf.death) +"\n";
-                if (ActInf.age != 0) 
+                if (ActInf.death != null && ActInf.death != string.Empty)
+                    ActorInfoObj += "💀Дата смерти: " + Film.Methods.ChangeDateType(ActInf.death) + "\n";
+                if (ActInf.age != 0)
                     ActorInfoObj += "⏰Возраст: " + ActInf.age + "\n\n";
                 if (ActInf.facts != null && ActInf.facts.Count != 0)
-                    ActorInfoObj += "✨Интересные факты\n" + string.Join("\n",ActInf.facts.Take(Math.Min(3,ActInf.facts.Count)).Select(f => $"✔ {f}")) + "\n";
+                    ActorInfoObj += "✨Интересные факты\n" + string.Join("\n", ActInf.facts.Take(Math.Min(3, ActInf.facts.Count)).Select(f => $"✔ {f}")) + "\n";
                 ActorInfoObj += "\n📽Фильмография\n";
                 int i = 0;
                 var l = new List<int>();
-                
+
                 foreach (var item in ActInf.films)
                 {
                     if (i == 10)
@@ -592,26 +625,26 @@ namespace Freetime_Planner
 
                     if (l.Contains(item.filmId))
                         continue;
-                        
-                    if (item.nameRu == null)                        
+
+                    if (item.nameRu == null)
                         ActorInfoObj += item.nameEn;
-                    else                        
+                    else
                         ActorInfoObj += item.nameRu;
 
 
                     if (item.rating != null)
-                    { 
+                    {
                         var m = Regex.Match(item.rating, @"\b(\d)\.(\d)\b");
                         if (m.Success && m.Groups[1].Value != "0" && m.Groups[2].Value != "0")
-                             ActorInfoObj += " ⭐" + item.rating;                   
+                            ActorInfoObj += " ⭐" + item.rating;
                     }
                     ActorInfoObj += "\n";
                     i++;
                     l.Add(item.filmId);
                 }
-                 
 
-                    return ActorInfoObj;
+
+                return ActorInfoObj;
             }
             /// <summary>
             /// Возвращает подробную информацию по ID фильма (отправляет запрос на Кинопоиск)
@@ -620,6 +653,10 @@ namespace Freetime_Planner
             /// <returns></returns>
             public static string FullInfo(User user, int filmID, out MessageKeyboard keyboard, out IEnumerable<MediaAttachment> attachments)
             {
+                Video trailer = null;
+                var t = new Task(() => FilmObject.GetTrailer(filmID, ref trailer));
+                t.Start();
+
                 var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/" + filmID.ToString());
                 var request = new RestRequest(Method.GET);
                 request.AddHeader("X-API-KEY", Bot._kp_key);
@@ -630,11 +667,15 @@ namespace Freetime_Planner
                 FilmObject film;
                 try { film = JsonConvert.DeserializeObject<FilmObject>(response.Content); }
                 catch (Exception) { keyboard = null; attachments = null; return "При загрузке информации о фильме что-то произошло... 😔 Попробуй повторно выполнить запрос"; }
+
                 if (film.data.nameEn != null)
                     user.AddFilmSoundtrackAsync(film.data.nameEn, film.data.premiereWorld.Substring(0, 4));
                 else
                     user.AddFilmSoundtrackAsync(film.data.nameRu, film.data.premiereWorld.Substring(0, 4));
-                attachments = new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()) };
+                var poster = Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString());
+                t.Wait();
+                attachments = new List<MediaAttachment> { poster, trailer };
+
                 keyboard = Keyboards.FilmSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), film.data.premiereRu ?? film.data.premiereWorld ?? film.data.year, string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereDigital ?? film.data.premiereDvd);
                 return FullInfo(film);
             }
@@ -687,7 +728,7 @@ namespace Freetime_Planner
                     GroupCollection gr = Regex.Match(eng_date, @"(\d{4})-(\d{2})-(\d{2})").Groups;
                     return $"{gr[3]}.{gr[2]}.{gr[1]}";
                 }
-                catch(Exception) { return ""; }
+                catch (Exception) { return ""; }
             }
 
             #region Методы для превращения цифр в эмодзи
@@ -742,7 +783,7 @@ namespace Freetime_Planner
                 IRestResponse response = client.Execute(request);
                 FilmResults.Results results;
                 try { results = JsonConvert.DeserializeObject<FilmResults.Results>(response.Content); }
-                catch(Exception) { results = null; }
+                catch (Exception) { results = null; }
                 if (results == null || results.pagesCount == 0)
                     return null;
                 else
@@ -865,11 +906,11 @@ namespace Freetime_Planner
                 request.AddHeader("X-API-KEY", Bot._kp_key);
                 request.AddHeader("accept", "application/json");
                 //request.AddQueryParameter("filmId", filmId);
-                
+
                 IRestResponse response = client.Execute(request);
                 List<ActorResults.Actor> result = null;
-                try { result =  JsonConvert.DeserializeObject<List<ActorResults.Actor>>(response.Content).Where(x => x.professionKey == "ACTOR").ToList();}
-                catch (Exception){ result =  null; }
+                try { result = JsonConvert.DeserializeObject<List<ActorResults.Actor>>(response.Content).Where(x => x.professionKey == "ACTOR").ToList(); }
+                catch (Exception) { result = null; }
                 if (result == null || result.Count == 0)
                     return null;
 
@@ -922,7 +963,7 @@ namespace Freetime_Planner
                 IRestResponse response = client.Execute(request);
                 YouTube.YouTubeResults results;
                 try { results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content); }
-                catch(Exception) { return null; }
+                catch (Exception) { return null; }
 
                 var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
                 {
@@ -951,7 +992,7 @@ namespace Freetime_Planner
                 ServiceClass.service_data.IncGoogleRequests();
                 GoogleResponse results;
                 try { results = JsonConvert.DeserializeObject<GoogleResponse>(response.Content); }
-                catch(Exception) { return null; }
+                catch (Exception) { return null; }
                 var dict = new Dictionary<string, string>();
                 foreach (var item in results.items)
                 {
@@ -1074,12 +1115,12 @@ namespace Freetime_Planner
 
     //Класс, необходимый для десериализации ответа с Кинопоиска при поиске актера
     #region Actor
-    
+
 
     public static class ActorResults
     {
 
-        
+
         public class Actor
         {
             public int staffId { get; set; }
