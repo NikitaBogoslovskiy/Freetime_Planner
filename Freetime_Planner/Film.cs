@@ -794,7 +794,7 @@ namespace Freetime_Planner
                  return Keyboards.RandomFilmResults(results);
              }*/
             //not mobile
-            public static void Random_inMessage(User user)
+            /*public static void Random_inMessage(User user)
             {
                 Random random = new Random();
                 //int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 5);
@@ -819,7 +819,7 @@ namespace Freetime_Planner
                 
 
                 Keyboards.RandomFilmResultsMessage(user, results);
-            }
+            }*/
             /// <summary>
             /// Возвращает список аудиозаписей по названию фильма
             /// </summary>
