@@ -177,7 +177,7 @@ namespace Freetime_Planner
         }
     
         public static void UpdateGenreTV()
-        {/*
+        {
             var dict = new Dictionary<string, List<RandomTV.Film>>();
             foreach (var pair in Film.GenresConverts)
             {
@@ -216,7 +216,7 @@ namespace Freetime_Planner
                     break;
                 }
             }
-            GenreFilms = dict;*/
+            GenreTV = dict;
         }
         #endregion
 
@@ -290,7 +290,7 @@ namespace Freetime_Planner
                     string photoID2;
                     results[i].VKPhotoID = Attachments.RandomTVPosterID(results[i],out photoID2);
                     results[i].VKPhotoID_2 = photoID2;
-                    if (results[i].VKPhotoID == null && results[i].VKPhotoID_2 == null)
+                    if (results[i].VKPhotoID == null || results[i].VKPhotoID_2 == null)
                         continue;
                     dict[results[i].filmId] = results[i];
                 }

@@ -143,13 +143,27 @@ namespace Freetime_Planner
             }
         }
 
-        public static string RecommendedFilmPosterID(Film.FilmObject film)
+        public static string RecommendedFilmPosterID(Film.FilmObject film, out string photoID2)
         {
             try
             { 
                 string path = String.Format(Bot.directory + "/film_{0}_{1}.jpg", film.data.filmId, Guid.NewGuid());
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.data.posterUrl, path);
+                if (!SizeIsWell(path))
+                {
+                    photoID2 = null;
+                    return null;
+                }
+                var uploadServer2 = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_random, Bot.group_id_service);
+                var responseFile2 = Encoding.ASCII.GetString(wc.UploadFile(uploadServer2.UploadUrl, path));
+                var photo2 = Bot.private_vkapi.Photo.Save(new PhotoSaveParams
+                {
+                    SaveFileResponse = responseFile2,
+                    AlbumId = Bot.album_id_random,
+                    GroupId = Bot.group_id_service
+                }).First();
+                photoID2 = $"-{Bot.group_id_service}_{photo2.Id}";
                 if (!CropAndOverwrite(path))
                     return null;
                 var uploadServer = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_recommended, Bot.group_id_service);
@@ -167,6 +181,7 @@ namespace Freetime_Planner
             catch (Exception e)
             {
                 WriteLine($"Исключение: {e.Message}\nСтектрейс: {e.StackTrace}");
+                photoID2 = null;
                 return null;
             }
         }
@@ -282,7 +297,7 @@ namespace Freetime_Planner
                 WebClient wc = new WebClient();
                 wc.DownloadFile(film.posterUrl, path);
                 //не обрез
-                if (!CropAndOverwrite(path))
+                if (!SizeIsWell(path))
                 { photoID2 = null; return null; }
                 var uploadServer2 = Bot.private_vkapi.Photo.GetUploadServer(Bot.album_id_random_tv, Bot.group_id_service);
                 var responseFile2 = Encoding.ASCII.GetString(wc.UploadFile(uploadServer2.UploadUrl, path));
