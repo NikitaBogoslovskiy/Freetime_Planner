@@ -630,10 +630,10 @@ namespace Freetime_Planner
                 FilmObject film;
                 try { film = JsonConvert.DeserializeObject<FilmObject>(response.Content); }
                 catch (Exception) { keyboard = null; attachments = null; return "При загрузке информации о фильме что-то произошло... 😔 Попробуй повторно выполнить запрос"; }
-                if (film.data.nameEn != null)
-                    user.AddFilmSoundtrackAsync(film.data.nameEn, film.data.premiereWorld.Substring(0, 4));
+                if (film.data.nameEn != null && film.data.nameEn != string.Empty)
+                    user.AddFilmSoundtrackAsync(film.data.nameEn, "ost");
                 else
-                    user.AddFilmSoundtrackAsync(film.data.nameRu, film.data.premiereWorld.Substring(0, 4));
+                    user.AddFilmSoundtrackAsync(film.data.nameRu, "саундтрек");
                 attachments = new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()) };
                 keyboard = Keyboards.FilmSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), film.data.premiereRu ?? film.data.premiereWorld ?? film.data.year, string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereDigital ?? film.data.premiereDvd);
                 return FullInfo(film);

@@ -264,7 +264,7 @@ namespace Freetime_Planner
             WritelnColor("Bot", ConsoleColor.Yellow);
             var service = new ServiceCollection();
             service.AddAudioBypass();
-            vkapi_main = new VkApi();
+            vkapi_main = new VkApi(service);
             vkapi_service = new VkApi();
             private_vkapi = new VkApi(service);
             yandex_api = new YandexMusicApi();
@@ -337,8 +337,11 @@ namespace Freetime_Planner
             WritelnColor("Включаю режим отслеживания...", ConsoleColor.White);
             var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
             Key = response.Key;
-            Ts = response.Ts;
+            Ts_g = response.Ts;
             Server = response.Server;
+            var m_response = vkapi_main.Messages.GetLongPollServer(true);
+            //Ts_m = m_response.Ts;
+            Pts = m_response.Pts;
             //Eye();
             EyeAsync();
             WritelnColor("Запросов в секунду доступно: " + vkapi_main.RequestsPerSecond, ConsoleColor.White);
@@ -402,10 +405,11 @@ namespace Freetime_Planner
         */
         #region Watcher
         static string Key;
-        static string Ts;
+        static string Ts_g;
+        //static string Ts_m;
         static string Server;
-        /*static ulong? Pts;
-        static bool IsActive;
+        static ulong? Pts;
+        /*static bool IsActive;
         static Timer WatchTimer = null;
         static byte MaxSleepSteps = 3;
         static int StepSleepTime = 333;
@@ -428,29 +432,47 @@ namespace Freetime_Planner
                     var history = vkapi_main.Groups.GetBotsLongPollHistory(new BotsLongPollHistoryParams
                     {
                         Key = Key,
-                        Ts = Ts,
+                        Ts = Ts_g,
                         Server = Server,
                         Wait = 0
                     });
-                    Ts = history.Ts;
                     if (history == null || history.Updates.Count() == 0)
                         continue;
                     foreach (var m in history.Updates.Where(u => u.Type == GroupUpdateType.MessageNew))
                     {
                         var m1 = m.MessageNew.Message;
+                        if (m1.Attachments.Count == 1 && m1.Attachments[0].Instance is AudioMessage)
+                        {
+                            bool f = true;
+                            while (f)
+                            {
+                                //var m_response = vkapi_main.Messages.GetLongPollServer(true);
+                                var m_history = vkapi_main.Messages.GetLongPollHistory(new MessagesGetLongPollHistoryParams
+                                {
+                                    Ts = ulong.Parse(Ts_g),
+                                    Pts = Pts
+                                });
+                                m1 = m_history.Messages.Last();
+                                f = (m1.Attachments[0].Instance as AudioMessage).TranscriptState == TranscriptStates.InProgress;
+                            }
+                        }
                         if (m1.Type == MessageType.Received)
                         {
                             GetMessageAsync(m1, m.MessageNew.ClientInfo);
                         }
                     }
+                    Ts_g = history.Ts;
                     Thread.Sleep(340);
                 }
                 catch (Exception)
                 {
                     var response = vkapi_main.Groups.GetLongPollServer((ulong)Bot.group_id_main);
                     Key = response.Key;
-                    Ts = response.Ts;
+                    Ts_g = response.Ts;
                     Server = response.Server;
+                    var m_response = vkapi_main.Messages.GetLongPollServer(true);
+                    //Ts_m = m_response.Ts;
+                    Pts = m_response.Pts;
                 }
             }
         }
@@ -479,9 +501,17 @@ namespace Freetime_Planner
                             //SendMessage("Обрабатываю голосовое сообщение...");
                             return;
                         }
-                        if (user.CurrentLevel() == Mode.Film || user.CurrentLevel() == Mode.TV || user.CurrentLevel() == Mode.Search)
+                        if (user.CurrentLevel() == Mode.Film || user.CurrentLevel() == Mode.TV || user.CurrentLevel() == Mode.Search || user.CurrentLevel() == Mode.SearchGenre)
                         {
                             message.Text = am.Transcript;
+                            if (user.CurrentLevel() == Mode.SearchGenre)
+                            {
+                                user.RemoveLevel();
+                                if (user.CurrentLevel() == Mode.Film)
+                                    SendMessage(user, "Возврат к меню фильмов...", Keyboards.FilmKeyboard);
+                                else
+                                    SendMessage(user, "Возврат к меню сериалов...", Keyboards.TVKeyboard);
+                            }
                             if (user.CurrentLevel() != Mode.Search)
                                 user.AddLevel(Mode.Search);
                         }
@@ -515,10 +545,10 @@ namespace Freetime_Planner
         /// </summary>
         /*static void Eye()
         {
-            LongPollServerResponse Pool = vkapi.Messages.GetLongPollServer(true);
+            LongPollServerResponse Pool = vkapi_main.Messages.GetLongPollServer(true);
             StartAsync(Pool.Ts, Pool.Pts);
             NewMessages += _NewMessages;
-            vkapi.OnTokenExpires += _Logout;
+            vkapi_main.OnTokenExpires += _Logout;
             WritelnColor("Слежение за сообщениями успешно активировано", ConsoleColor.Green);
             Console.Beep();
         }
@@ -541,7 +571,7 @@ namespace Freetime_Planner
         }
         static LongPollServerResponse GetLongPoolServer(ulong? lastPts = null)
         {
-            LongPollServerResponse response = vkapi.Messages.GetLongPollServer(lastPts == null);
+            LongPollServerResponse response = vkapi_main.Messages.GetLongPollServer(lastPts == null);
             Ts = response.Ts;
             Pts = Pts == null ? response.Pts : lastPts;
             return response;
@@ -552,7 +582,7 @@ namespace Freetime_Planner
             if (history.Messages.Count > 0)
             {
                 CurrentSleepSteps = 1;
-                NewMessages?.Invoke(vkapi, history.Messages);
+                NewMessages?.Invoke(vkapi_main, history.Messages);
             }
             else if (CurrentSleepSteps < MaxSleepSteps) CurrentSleepSteps++;
             WatchTimer.Change(CurrentSleepSteps * StepSleepTime, Timeout.Infinite);
@@ -576,7 +606,7 @@ namespace Freetime_Planner
                 i++;
                 try
                 {
-                    history = vkapi.Messages.GetLongPollHistory(rp);
+                    history = vkapi_main.Messages.GetLongPollHistory(rp);
                 }
                 catch (TooManyRequestsException)
                 {
@@ -594,7 +624,7 @@ namespace Freetime_Planner
                 Pts = history.NewPts;
                 foreach (var m in history.Messages)
                 {
-                    m.FromId = m.Type == MessageType.Sended ? vkapi.UserId : m.UserId;
+                    m.FromId = m.Type == MessageType.Sended ? vkapi_main.UserId : m.UserId;
                 }
             }
             else WriteLine(errorLog);
@@ -614,7 +644,7 @@ namespace Freetime_Planner
                 if (messages[i].Type != MessageType.Sended)
                 {
                     var message = messages[i];
-                    VkNet.Model.User Sender = vkapi.Users.Get(new long[] { message.PeerId.Value }, ProfileFields.Online)[0];
+                    VkNet.Model.User Sender = vkapi_main.Users.Get(new long[] { message.PeerId.Value }, ProfileFields.Online)[0];
                     bool? IsMobileVersion = false;
                     var user = Users.GetUser(Sender, out bool IsOld);
                     if (message.Attachments.Count != 0)
@@ -907,7 +937,7 @@ namespace Freetime_Planner
                                     { user.MessageAddFilmActorsAsync(p.filmId); }
                                     if (user.FilmRecommendations.TryGetValue(int.Parse(p.filmId), out Film.FilmObject film))
                                     {
-                                        if (film.data.nameEn != null)
+                                        if (film.data.nameEn != null && film.data.nameEn != string.Empty)
                                             user.AddFilmSoundtrackAsync(film.data.nameEn, "ost");
                                         else
                                             user.AddFilmSoundtrackAsync(film.data.nameRu, "саундтрек");
@@ -1184,7 +1214,7 @@ namespace Freetime_Planner
                                     { user.MessageAddTVActorsAsync(p.filmId); }
                                     if (user.TVRecommendations.TryGetValue(int.Parse(p.filmId), out TV.TVObject tv))
                                     {
-                                        if (tv.data.nameEn != null)
+                                        if (tv.data.nameEn != null && tv.data.nameEn != string.Empty)
                                             user.AddTVSoundtrackAsync(tv.data.nameEn, "ost");
                                         else
                                             user.AddTVSoundtrackAsync(tv.data.nameRu, "саундтрек");
@@ -1243,6 +1273,7 @@ namespace Freetime_Planner
                                     }
                                     else
                                         SendMessage(user, "К сожалению, я не смог найти места для просмотра... 😔");
+                                    user.RemoveLevel();
                                     break;
 
                                 default:
