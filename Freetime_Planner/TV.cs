@@ -490,10 +490,10 @@ namespace Freetime_Planner
                 TVObject film;
                 try { film = JsonConvert.DeserializeObject<TVObject>(response.Content); }
                 catch(Exception) { keyboard = null; attachments = null; return "При загрузке информации о сериале что-то произошло... 😔 Попробуй повторно выполнить запрос"; }
-                if (film.data.nameEn != null)
-                    user.AddTVSoundtrackAsync(film.data.nameEn, "series");
+                if (film.data.nameEn != null && film.data.nameEn != string.Empty)
+                    user.AddTVSoundtrackAsync(film.data.nameEn, "ost");
                 else
-                    user.AddTVSoundtrackAsync(film.data.nameRu, "сериал");
+                    user.AddTVSoundtrackAsync(film.data.nameRu, "саундтрек");
                 attachments = new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()) };
                 keyboard = Keyboards.TVSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereRu);
                 return FullInfo(film);
