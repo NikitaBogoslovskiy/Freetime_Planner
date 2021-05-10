@@ -10,6 +10,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using static System.Console;
 using VkNet.Model.Template;
+using VkNet.Model.Keyboard;
 
 namespace Freetime_Planner
 {
@@ -667,6 +668,7 @@ namespace Freetime_Planner
 
     public class ActorsTemplate
     {
+        public List<(string, string, Photo,MessageKeyboard)> actors;
         public MessageTemplate Actors { get; set; }
         public DateTime DownloadTime { get; set; }
         public bool IsEmpty { get; set; }
@@ -682,6 +684,13 @@ namespace Freetime_Planner
             Actors = _actors;
             DownloadTime = DateTime.Now;
             IsEmpty = _actors.Elements.Count() == 0;
+            IsLoading = false;
+        }
+         public void Update(List<(string, string, Photo,MessageKeyboard)> _actors)
+        {
+            actors = _actors;
+            DownloadTime = DateTime.Now;
+            IsEmpty = _actors.Count() == 0;
             IsLoading = false;
         }
     }

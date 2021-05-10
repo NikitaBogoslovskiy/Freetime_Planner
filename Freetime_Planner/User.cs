@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using RestSharp;
 using VkNet.Model.Attachments;
-
+using VkNet.Model.Keyboard;
 namespace Freetime_Planner
 {
     public class User
@@ -386,6 +386,23 @@ namespace Freetime_Planner
             }
         }
 
+        public void GetFilmActors(string filmID)
+        {
+            if (!FilmActors.ContainsKey(filmID))
+                AddFilmActors(filmID);
+            var obj = FilmActors[filmID];
+            while (obj.IsLoading) { }
+            if (obj.IsEmpty)
+                Bot.SendMessage(this, "К сожалению, для этого сериала я не смог ничего найти... 😔");
+            else
+            {
+                Bot.SendMessage(this, "Результаты поиска");
+                Parallel.ForEach(obj.actors, (t) =>
+                 {
+                     Bot.SendMessage(this, t.Item1 + "\n"+t.Item2,null,null,new List<MediaAttachment> {t.Item3});
+                 });
+            }
+        }
         /// <summary>
         /// Добавляет популярные фильмы в список рекомендуемых фильмов асинхронно
         /// </summary>
@@ -669,7 +686,43 @@ namespace Freetime_Planner
                 FilmActors[filmID].IsLoading = false;
             }
         }
+        //-----------------------------------not  template-------------------------------
 
+        public async void MessageAddFilmActorsAsync(string filmID)
+        {
+            await Task.Run(() => MessageAddFilmActors(filmID));
+        }
+
+        public void MessageAddFilmActors(string filmID)
+        {
+            var proverka = Film.Methods.Actors(filmID);
+            var res = new ActorsTemplate();
+            var res1 = new List<(string, string, Photo,MessageKeyboard)>();
+
+            if (proverka != null)
+            {
+                foreach(var x in proverka.Take(Math.Min(5, proverka.Count)))
+                {
+                    string name;
+                    if (x.nameRu != null && x.nameRu != "")
+                        name = x.nameRu;
+                    else name = x.nameEn;
+                        if (x.description == null || x.description == string.Empty)
+                            x.description = "Безымянный";
+                    var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+                   button.AddButton("Узнать больше", $"f;;;{actor.staffId};;;", Positive, "text")
+                        button.SetInline();
+                    res1.Add((name, x.description, Attachments.PosterObject(this, x.posterUrl, x.staffId),button.Build());
+                }
+                res.Update(res1);
+                FilmActors[filmID] = res;
+            }
+            else
+            {
+                FilmActors[filmID] = res;
+                FilmActors[filmID].IsLoading = false;
+            }
+        }
         //--------------Пользовательские методы для сериалов--------------
 
         public MessageTemplate GetTVRecommendations()

@@ -814,15 +814,21 @@ namespace Freetime_Planner
 
                                 //"Актеры"
                                 case Actors:
-                                    SendMessage(user, "Формирую список актеров...");
+                                    SendMessage(user, "Формирую список актеров...");                                       
                                     vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
-                                    MessageTemplate filmmetod = null;
-                                    if (!user.GetFilmActors(p.filmId, ref filmmetod))
-                                        SendMessage(user, "К сожалению, для этого сериала я не смог ничего найти... 😔");
-                                    else
-                                        SendMessage(user, "Результаты поиска", null, filmmetod);
-                                    user.RemoveLevel();
 
+                                    if (IsMobileVersion.HasValue && IsMobileVersion.Value)
+                                    {
+                                        MessageTemplate filmmetod = null;
+                                        if (!user.GetFilmActors(p.filmId, ref filmmetod))
+                                            SendMessage(user, "К сожалению, для этого сериала я не смог ничего найти... 😔");
+                                        else
+                                            SendMessage(user, "Результаты поиска", null, filmmetod);
+                                        user.RemoveLevel();
+                                    }
+                                    else {
+                                        user.GetFilmActors(p.filmId);
+                                    }
                                     break;
                                 //"Узнать больше"
                                 case MoreAboutActor:
@@ -891,7 +897,10 @@ namespace Freetime_Planner
                                 case More:
                                     SendMessage(user, "Готовлю детали по фильму...");
                                     vkapi_main.Messages.SetActivity(user.ID.ToString(), MessageActivityType.Typing, user.ID, ulong.Parse(group_id_main.ToString()));
-                                    user.AddFilmActorsAsync(p.filmId);
+                                    if (IsMobileVersion.HasValue && IsMobileVersion.Value)
+                                    {  user.AddFilmActorsAsync(p.filmId);}
+                                    else
+                                    { user.MessageAddFilmActorsAsync(p.filmId); }
                                     if (user.FilmRecommendations.TryGetValue(int.Parse(p.filmId), out Film.FilmObject film))
                                     {
                                         if (film.data.nameEn != null)
