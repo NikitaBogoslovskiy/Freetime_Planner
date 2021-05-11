@@ -365,16 +365,27 @@ namespace Freetime_Planner
         {
             try
             {
-                vkapi_main.Messages.Send(new MessagesSendParams
+                long l = 0;
+                while (true)
                 {
-                    UserId = user.ID,
-                    Message = message,
-                    RandomId = DateTime.Now.Millisecond,
-                    Keyboard = keyboard,
-                    Template = template,
-                    Attachments = attachments
-                });
-                WriteLine($"Успешно отправлен ответ: {message}\nВремя между сообщениями = {timer.ElapsedMilliseconds / 1000.0}");
+                    l = vkapi_main.Messages.Send(new MessagesSendParams
+                    {
+                        UserId = user.ID,
+                        Message = message,
+                        RandomId = DateTime.Now.Millisecond,
+                        Keyboard = keyboard,
+                        Template = template,
+                        Attachments = attachments
+                    });
+                    if (l > user.LastMessageID)
+                    {
+                        user.LastMessageID = l;
+                        break;
+                    }
+                    else
+                        WritelnColor("Предотвращена попытка не отправить сообщение", ConsoleColor.Red);
+                }
+                WriteLine($"Успешно отправлен ответ: {message}\nВремя между сообщениями = {timer.ElapsedMilliseconds / 1000.0}\nID сообщения = {l}");
                 timer.Restart();
                 Console.Beep();
             }
@@ -897,8 +908,9 @@ namespace Freetime_Planner
                                         SendMessage(user, "К сожалению, для этого фильма я не смог ничего найти... 😔");
                                         //break;
                                     }
+                                    else
                                     //var attachments = audios.Select(a => a as MediaAttachment).ToList();
-                                    SendMessage(user, "", null, null, audios.Select(a => a as MediaAttachment));
+                                        SendMessage(user, "", null, null, audios.Select(a => a as MediaAttachment));
                                     //attachments = null;
                                     user.RemoveLevel();
                                     break;
@@ -1174,8 +1186,9 @@ namespace Freetime_Planner
                                         SendMessage(user, "К сожалению, для этого сериала я не смог ничего найти... 😔");
                                         //break;
                                     }
+                                    else
                                     //attachments = audios.Select(a => a as MediaAttachment).ToList();
-                                    SendMessage(user, "", null, null, audios.Select(a => a as MediaAttachment));
+                                        SendMessage(user, "", null, null, audios.Select(a => a as MediaAttachment));
                                     //attachments = null;
                                     user.RemoveLevel();
                                     break;
