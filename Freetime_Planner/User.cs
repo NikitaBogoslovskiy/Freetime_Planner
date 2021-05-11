@@ -84,6 +84,7 @@ namespace Freetime_Planner
         public Dictionary<string, List<RandomTV.Film>> GenreTV { get; set; }
         public Dictionary<string, ActorsTemplate> FilmActors { get; set; }
         public Dictionary<string, ActorsTemplate> TVActors { get; set; }
+        public long LastMessageID { get; set; }
 
         /// <summary>
         /// Конструктор пользователя
@@ -128,6 +129,7 @@ namespace Freetime_Planner
             OnlyHealthyFood = false;
             GenreFilms = Film.GenreFilms;
             GenreTV = TV.GenreTV;
+            LastMessageID = -1;
         }
 
         /// <summary>
