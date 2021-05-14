@@ -72,7 +72,7 @@ namespace Freetime_Planner
                 case "Раз в пять дней": return Mode.FiveDays;
                 case "Раз в неделю": return Mode.EveryWeek;
                 case "Без рассылки": return Mode.NoMail;
-                case "Режим диеты": return Mode.DietMode;
+                case "Режим питания": return Mode.DietMode;
                 case "Без ограничений": return Mode.NoLimit;
                 case "Здоровое питание": return Mode.HealthyFood;
                 case "По жанру": return Mode.SearchGenre;

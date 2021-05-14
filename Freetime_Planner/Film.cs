@@ -69,10 +69,12 @@ namespace Freetime_Planner
                 try
                 {
                     var pair = JsonConvert.DeserializeObject<KeyValuePair<DateTime, Dictionary<int, FilmObject>>>(File.ReadAllText(PopularFilmsPath));
+                    if (pair.Value == null || pair.Value.Count == 0)
+                        throw new Exception();
                     LastPopularFilmsUpdate = pair.Key;
                     PopularFilms = pair.Value;
                 }
-                catch (Exception )
+                catch (Exception)
                 {
                     UpdatePopularFilms();
                     LastPopularFilmsUpdate = DateTime.Now;
@@ -93,6 +95,8 @@ namespace Freetime_Planner
                 try
                 {
                     PopularFilmsQueue = JsonConvert.DeserializeObject<Queue<Mailing.MailObject>>(File.ReadAllText(PopularFilmsQueuePath));
+                    if (PopularFilmsQueue == null || PopularFilmsQueue.Count == 0)
+                        throw new Exception();
                 }
                 catch (Exception)
                 {
@@ -115,6 +119,8 @@ namespace Freetime_Planner
                 try
                 {
                     GenreFilms = JsonConvert.DeserializeObject<Dictionary<string, List<RandomFilms.Film>>>(File.ReadAllText(GenreFilmsPath));
+                    if (GenreFilms == null || GenreFilms.Count == 0)
+                        throw new Exception();
                 }
                 catch (Exception)
                 {
@@ -306,6 +312,8 @@ namespace Freetime_Planner
                 try
                 {
                     var pair = JsonConvert.DeserializeObject<KeyValuePair<DateTime, Dictionary<int, RandomFilms.Film>>>(File.ReadAllText(RandomFilmsPath));
+                    if (pair.Value == null || pair.Value.Count == 0)
+                        throw new Exception();
                     LastRandomFilmsUpdate = pair.Key;
                     RandomFilms = pair.Value;
                 }
@@ -477,9 +485,9 @@ namespace Freetime_Planner
                 PremiereNotification = false;
             }
 
-            public async void CreateTrailerAsync()
+            public async Task CreateTrailerAsync()
             {
-                await Task.Run(() => CreateTrailer());
+                Task.Run(() => CreateTrailer());
             }
             private void CreateTrailer()
             {
@@ -559,29 +567,29 @@ namespace Freetime_Planner
             {
 
                 var ActInf = Film.Methods.ActorInfo(personId);
-                attachments = new List<MediaAttachment> { Attachments.PosterObject(user, ActInf.posterUrl, personId) };
+                attachments = new List<MediaAttachment> { user.GetPoster(ActInf.posterUrl, ActInf.personId.ToString()) };
                 string ActorInfoObj ="";
                 if(ActInf.hasAwards == 1)
                     ActorInfoObj = "🏆 ";
                 if (ActInf.nameRu == null || ActInf.nameRu == string.Empty)
-                    ActorInfoObj += ActInf.nameEn + "\n";
+                    ActorInfoObj += ActInf.nameEn + "\n\n";
                 else if (ActInf.nameEn == null || ActInf.nameEn == string.Empty)
-                      ActorInfoObj += ActInf.nameRu + "\n";
+                      ActorInfoObj += ActInf.nameRu + "\n\n";
                 
                 else if(ActInf.nameRu != null && ActInf.nameEn != null && ActInf.nameRu!= string.Empty && ActInf.nameEn!= string.Empty)
                       ActorInfoObj += ActInf.nameRu + "/" + ActInf.nameEn + "\n\n" ;
                 
                 if (ActInf.growth != null && ActInf.growth!="0")
-                    ActorInfoObj += "🕺Рост: " + ActInf.growth + "\n";
+                    ActorInfoObj += "🕺 Рост: " + ActInf.growth + "\n";
                 if (ActInf.birthday != null && ActInf.birthday != string.Empty)
-                    ActorInfoObj += "👶День рождения: " + Film.Methods.ChangeDateType(ActInf.birthday) + "\n";
+                    ActorInfoObj += "👶 Дата рождения: " + Film.Methods.ChangeDateType(ActInf.birthday) + "\n";
                 if (ActInf.death != null && ActInf.death !=string.Empty)
-                    ActorInfoObj += "💀Дата смерти: " + Film.Methods.ChangeDateType(ActInf.death) +"\n";
+                    ActorInfoObj += "😪 Дата смерти: " + Film.Methods.ChangeDateType(ActInf.death) +"\n";
                 if (ActInf.age != 0) 
-                    ActorInfoObj += "⏰Возраст: " + ActInf.age + "\n\n";
+                    ActorInfoObj += "⏰ Возраст: " + ActInf.age + "\n\n";
                 if (ActInf.facts != null && ActInf.facts.Count != 0)
-                    ActorInfoObj += "✨Интересные факты\n" + string.Join("\n",ActInf.facts.Take(Math.Min(3,ActInf.facts.Count)).Select(f => $"✔ {f}")) + "\n";
-                ActorInfoObj += "\n📽Фильмография\n";
+                    ActorInfoObj += "✨ Интересные факты\n" + string.Join("\n",ActInf.facts.Take(Math.Min(3,ActInf.facts.Count)).Select(f => $"✔ {f}")) + "\n";
+                ActorInfoObj += "\n📽 Фильмография\n";
                 int i = 0;
                 var l = new List<int>();
                 
@@ -625,17 +633,24 @@ namespace Freetime_Planner
                 request.AddHeader("X-API-KEY", Bot._kp_key);
                 request.AddQueryParameter("append_to_response", "BUDGET");
                 request.AddQueryParameter("append_to_response", "RATING");
+                Console.WriteLine($"Отправил запрос... ({timer.ElapsedMilliseconds})");
                 IRestResponse response = client.Execute(request);
+                Console.WriteLine($"Пришел ответ! ({timer.ElapsedMilliseconds})");
 
                 FilmObject film;
                 try { film = JsonConvert.DeserializeObject<FilmObject>(response.Content); }
                 catch (Exception) { keyboard = null; attachments = null; return "При загрузке информации о фильме что-то произошло... 😔 Попробуй повторно выполнить запрос"; }
                 if (film.data.nameEn != null && film.data.nameEn != string.Empty)
-                    user.AddFilmSoundtrackAsync(film.data.nameEn, "ost");
+                    user.AddFilmSoundtrackAsync(film.data.nameEn, "ost").ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
                 else
-                    user.AddFilmSoundtrackAsync(film.data.nameRu, "саундтрек");
-                attachments = new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()) };
+                    user.AddFilmSoundtrackAsync(film.data.nameRu, "саундтрек").ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
+
+                Console.WriteLine($"Начал грузить картинку...  ({timer.ElapsedMilliseconds})");
+                attachments = new List<MediaAttachment> { user.GetPoster(film.data.posterUrl, film.data.filmId.ToString()) };
+                Console.WriteLine($"Загрузил картинку, теперь гружу клавиатуру  ({timer.ElapsedMilliseconds})");
+
                 keyboard = Keyboards.FilmSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), film.data.premiereRu ?? film.data.premiereWorld ?? film.data.year, string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereDigital ?? film.data.premiereDvd);
+                Console.WriteLine($"Загрузил клавиатуру, отправляю!  ({timer.ElapsedMilliseconds})");
                 return FullInfo(film);
             }
 
@@ -733,7 +748,7 @@ namespace Freetime_Planner
             /// </summary>
             /// <param name="filmName"></param>
             /// <returns></returns>
-            public static MessageTemplate Search(string filmName)
+            public static MessageTemplate Search(User user, string filmName)
             {
                 var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
                 var request = new RestRequest(Method.GET);
@@ -746,7 +761,7 @@ namespace Freetime_Planner
                 if (results == null || results.pagesCount == 0)
                     return null;
                 else
-                    return Keyboards.FilmResults(results);
+                    return Keyboards.FilmResults(user, results);
             }
             //not mobile
             public static void Search_inMessage(User user, string filmName)

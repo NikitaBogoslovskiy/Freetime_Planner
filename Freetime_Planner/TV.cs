@@ -43,6 +43,8 @@ namespace Freetime_Planner
                 try
                 {
                     var pair = JsonConvert.DeserializeObject<KeyValuePair<DateTime, Dictionary<int, TVObject>>>(File.ReadAllText(PopularTVPath));
+                    if (pair.Value == null || pair.Value.Count == 0)
+                        throw new Exception();
                     LastPopularTVUpdate = pair.Key;
                     PopularTV = pair.Value;
                 }
@@ -68,6 +70,8 @@ namespace Freetime_Planner
                 try
                 {
                     GenreTV = JsonConvert.DeserializeObject<Dictionary<string, List<RandomTV.Film>>>(File.ReadAllText(GenreTVPath));
+                    if (GenreTV == null || GenreTV.Count == 0)
+                        throw new Exception();
                 }
                 catch (Exception)
                 {
@@ -243,6 +247,8 @@ namespace Freetime_Planner
                 try
                 {
                     var pair = JsonConvert.DeserializeObject<KeyValuePair<DateTime, Dictionary<int, RandomTV.Film>>>(File.ReadAllText(RandomTVPath));
+                    if (pair.Value == null || pair.Value.Count == 0)
+                        throw new Exception();
                     LastRandomTVUpdate = pair.Key;
                     RandomTV = pair.Value;
                 }
@@ -424,29 +430,29 @@ namespace Freetime_Planner
             {
 
                 var ActInf = Film.Methods.ActorInfo(personId);
-                attachments = new List<MediaAttachment> { Attachments.PosterObject(user, ActInf.posterUrl, personId) };
+                attachments = new List<MediaAttachment> { user.GetPoster(ActInf.posterUrl, ActInf.personId.ToString()) };
                 string ActorInfoObj = "";
                 if (ActInf.hasAwards == 1)
                     ActorInfoObj = "🏆 ";
                 if (ActInf.nameRu == null || ActInf.nameRu == string.Empty)
-                    ActorInfoObj += ActInf.nameEn + "\n";
+                    ActorInfoObj += ActInf.nameEn + "\n\n";
                 else if (ActInf.nameEn == null || ActInf.nameEn == string.Empty)
-                    ActorInfoObj += ActInf.nameRu + "\n";
+                    ActorInfoObj += ActInf.nameRu + "\n\n";
 
                 else if (ActInf.nameRu != null && ActInf.nameEn != null && ActInf.nameRu != string.Empty && ActInf.nameEn != string.Empty)
                     ActorInfoObj += ActInf.nameRu + "/" + ActInf.nameEn + "\n\n";
 
                 if (ActInf.growth != null && ActInf.growth != "0")
-                    ActorInfoObj += "🕺Рост: " + ActInf.growth + "\n";
+                    ActorInfoObj += "🕺 Рост: " + ActInf.growth + "\n";
                 if (ActInf.birthday != null && ActInf.birthday != string.Empty)
-                    ActorInfoObj += "👶День рождения: " + Film.Methods.ChangeDateType(ActInf.birthday) + "\n";
+                    ActorInfoObj += "👶 Дата рождения: " + Film.Methods.ChangeDateType(ActInf.birthday) + "\n";
                 if (ActInf.death != null && ActInf.death !=string.Empty)
-                    ActorInfoObj += "💀Дата смерти: " + Film.Methods.ChangeDateType(ActInf.death) + "\n";
+                    ActorInfoObj += "😪 Дата смерти: " + Film.Methods.ChangeDateType(ActInf.death) + "\n";
                 if (ActInf.age != 0)
-                    ActorInfoObj += "⏰Возраст: " + ActInf.age + "\n\n";
+                    ActorInfoObj += "⏰ Возраст: " + ActInf.age + "\n\n";
                 if (ActInf.facts != null && ActInf.facts.Count != 0)
-                    ActorInfoObj += "✨Интересные факты\n" + string.Join("\n", ActInf.facts.Take(Math.Min(3, ActInf.facts.Count)).Select(f => $"✔ {f}")) + "\n";
-                ActorInfoObj += "\n📽Фильмография\n";
+                    ActorInfoObj += "✨ Интересные факты\n" + string.Join("\n", ActInf.facts.Take(Math.Min(3, ActInf.facts.Count)).Select(f => $"✔ {f}")) + "\n";
+                ActorInfoObj += "\n📽 Фильмография\n";
                 int i = 0;
                 var l = new List<int>();
 
@@ -491,10 +497,10 @@ namespace Freetime_Planner
                 try { film = JsonConvert.DeserializeObject<TVObject>(response.Content); }
                 catch(Exception) { keyboard = null; attachments = null; return "При загрузке информации о сериале что-то произошло... 😔 Попробуй повторно выполнить запрос"; }
                 if (film.data.nameEn != null && film.data.nameEn != string.Empty)
-                    user.AddTVSoundtrackAsync(film.data.nameEn, "ost");
+                    user.AddTVSoundtrackAsync(film.data.nameEn, "ost").ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
                 else
-                    user.AddTVSoundtrackAsync(film.data.nameRu, "саундтрек");
-                attachments = new List<MediaAttachment> { Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString()) };
+                    user.AddTVSoundtrackAsync(film.data.nameRu, "саундтрек").ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
+                attachments = new List<MediaAttachment> { user.GetPoster(film.data.posterUrl, film.data.filmId.ToString()) };
                 keyboard = Keyboards.TVSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereRu);
                 return FullInfo(film);
             }
@@ -534,7 +540,7 @@ namespace Freetime_Planner
                 return res;
             }
 
-            public static MessageTemplate Search(string TVName)
+            public static MessageTemplate Search(User user, string TVName)
             {
                 var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword");
                 var request = new RestRequest(Method.GET);
@@ -547,7 +553,7 @@ namespace Freetime_Planner
                 if (results == null || results.pagesCount == 0)
                     return null;
                 else
-                    return Keyboards.TVResults(results);
+                    return Keyboards.TVResults(user, results);
             }
             //----not online---------------------------------------------------------
             public static void Search_inMessage(User user, string TVName)

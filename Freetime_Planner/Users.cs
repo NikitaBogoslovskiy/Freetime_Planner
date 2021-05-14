@@ -32,9 +32,22 @@ namespace Freetime_Planner
                 if (FileIsUsed)
                     continue;
                 FileIsUsed = true;
-                var dict = JsonConvert.DeserializeObject<Dictionary<long, User>>(File.ReadAllText(users_path));
+                Dictionary<long, User> dict = null;
+                try
+                {
+                    dict = JsonConvert.DeserializeObject<Dictionary<long, User>>(File.ReadAllText(users_path));
+                }
+                catch(Exception)
+                {
+                    dict = null;
+                    File.Delete(users_path);
+                    File.Create(users_path);
+                }
                 FileIsUsed = false;
-                Users_Dict = dict ?? new Dictionary<long, User>();
+                if (dict == null || dict.Count == 0)
+                    Users_Dict = new Dictionary<long, User>();
+                else
+                    Users_Dict = dict;
                 break;
             }
             foreach (var user in Users_Dict.Values)

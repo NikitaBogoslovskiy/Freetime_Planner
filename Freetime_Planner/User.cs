@@ -11,6 +11,7 @@ using RestSharp;
 using VkNet.Model.Attachments;
 using VkNet.Model.Keyboard;
 using static VkNet.Enums.SafetyEnums.KeyboardButtonColor;
+using System.Collections.Concurrent;
 
 namespace Freetime_Planner
 {
@@ -46,7 +47,7 @@ namespace Freetime_Planner
         /// </summary>
         public Dictionary<int, Film.FilmObject> FilmRecommendations { get; set; }
 
-        public  int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
+        public int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
         public Dictionary<int, RandomFilms.Film> FilmRandomDict { get; set; }
         public bool RandomFilmsIsUpdating { get; set; }
         public Dictionary<int, RandomTV.Film> TVRandomDict { get; set; }
@@ -74,7 +75,7 @@ namespace Freetime_Planner
         public Queue<Mailing.MailObject> MailObjects { get; set; }
 
         public DateTime LastPlannedFilmsUpdate { get; set; }
-        
+
         public Dictionary<string, FilmSountracks> FilmTracks { get; set; }
         public Dictionary<string, FilmSountracks> TVTracks { get; set; }
         public Dictionary<string, string> LastFood { get; set; }
@@ -84,6 +85,7 @@ namespace Freetime_Planner
         public Dictionary<string, List<RandomTV.Film>> GenreTV { get; set; }
         public Dictionary<string, ActorsTemplate> FilmActors { get; set; }
         public Dictionary<string, ActorsTemplate> TVActors { get; set; }
+        public ConcurrentDictionary<string, (string, DateTime)> Posters { get; set; }
         public long LastMessageID { get; set; }
 
         /// <summary>
@@ -120,6 +122,7 @@ namespace Freetime_Planner
             TVTracks = new Dictionary<string, FilmSountracks>();
             FilmActors = new Dictionary<string, ActorsTemplate>();
             TVActors = new Dictionary<string, ActorsTemplate>();
+            Posters = new ConcurrentDictionary<string, (string, DateTime)>();
             LastFood = new Dictionary<string, string>
             {
                 ["Cocktail"] = "",
@@ -180,9 +183,9 @@ namespace Freetime_Planner
             //Bot.SendMessage("Жми любую кнопку");
         }
 
-        public async void AddMailObjectAsync(string id, bool isTrailer, string ruName = null, string engName = null, string date = null)
+        public async Task AddMailObjectAsync(string id, bool isTrailer, string ruName = null, string engName = null, string date = null)
         {
-            await Task.Run(() => AddMailObject(id, isTrailer, ruName, engName, date));
+            Task.Run(() => AddMailObject(id, isTrailer, ruName, engName, date));
         }
 
         public void AddMailObject(string id, bool isTrailer, string ruName = null, string engName = null, string date = null)
@@ -210,7 +213,7 @@ namespace Freetime_Planner
 
         public void GetFilmRecommendationsMessage(User user)
         {
-            
+
             Keyboards.FilmMyRecommendationsMessage(user, FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
 
         }
@@ -219,15 +222,15 @@ namespace Freetime_Planner
         /// </summary>
         /// <returns></returns>
         public MessageTemplate RandomFilms()
-        { 
+        {
             if (!RandomFilmsIsUpdating)
             {
                 RandomFilmsIsUpdating = true;
-                UpdateFilmRandomAsync();
+                UpdateFilmRandomAsync().ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); 
             }
             if (FilmRandomDict == null || FilmRandomDict.Count == 0)
                 FilmRandomDict = Film.RandomFilms;
-            return Keyboards.RandomFilmResults(FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+            return Keyboards.RandomFilmResults(this, FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
         }
 
         public void RandomFilmsMessage(User user)
@@ -235,23 +238,31 @@ namespace Freetime_Planner
             if (!RandomFilmsIsUpdating)
             {
                 RandomFilmsIsUpdating = true;
-                UpdateFilmRandomAsync();
+                UpdateFilmRandomAsync().ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); 
             }
             if (FilmRandomDict == null || FilmRandomDict.Count == 0)
                 FilmRandomDict = Film.RandomFilms;
-            Keyboards.FilmMyRandomMessage(user,FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+            Keyboards.FilmMyRandomMessage(user, FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
         }
 
         public MessageTemplate GetGenreFilms(string genre)
         {
-            UpdateGenreFilmsAsync(genre);
-            return Keyboards.RandomFilmResults(GenreFilms[genre].Shuffle().Take(Math.Min(3, GenreFilms[genre].Count)));
+            UpdateGenreFilmsAsync(genre).ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); 
+            return Keyboards.RandomFilmResults(this, GenreFilms[genre].Shuffle().Take(Math.Min(3, GenreFilms[genre].Count)));
         }
 
         public void SendGenreFilm(string genre)
         {
-            UpdateGenreFilmsAsync(genre);
+            UpdateGenreFilmsAsync(genre).ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); 
             Keyboards.FilmMyRandomMessage(this, GenreFilms[genre].Shuffle().Take(Math.Min(3, GenreFilms[genre].Count)));
+        }
+
+        public Photo GetPoster(string url, string filmID)
+        {
+            if (!Posters.ContainsKey(filmID))
+                return Attachments.PosterObject(this, url, filmID);
+            while (Posters[filmID].Item1 == null) { }
+            return Bot.private_vkapi.Photo.GetById(new string[] { Posters[filmID].Item1 })[0];
         }
 
 
@@ -298,7 +309,7 @@ namespace Freetime_Planner
                 {
                     var film = new Film.FilmObject(nameRu, nameEn, Date, int.Parse(filmID));
                     PlannedFilms[1].Add(film);
-                    film.CreateTrailerAsync();
+                    film.CreateTrailerAsync().ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); ;
                 }
             }
             else
@@ -309,7 +320,7 @@ namespace Freetime_Planner
                     PlannedFilms[0].Add(new Film.FilmObject(nameRu, nameEn, Date, int.Parse(filmID)));
             }
             Users.Unload();
-            UpdateFilmRecommendationsAsync(nameEn);
+            UpdateFilmRecommendationsAsync(nameEn).ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); ;
             return true;
         }
 
@@ -330,7 +341,7 @@ namespace Freetime_Planner
         public void RemovePlannedFilm(string filmID)
         {
             var ind = PlannedFilms[0].FindIndex(film => film.data.filmId == int.Parse(filmID));
-            if (ind!= -1)
+            if (ind != -1)
             {
                 PlannedFilms[0].RemoveAt(ind);
                 return;
@@ -347,7 +358,7 @@ namespace Freetime_Planner
         /// <param name="nameEn"></param>
         public void LikeFilm(string nameEn)
         {
-            UpdateFilmRecommendationsAsync(nameEn);
+            UpdateFilmRecommendationsAsync(nameEn).ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); ;
         }
 
         /// <summary>
@@ -359,7 +370,7 @@ namespace Freetime_Planner
             HiddenFilms.Add(filmID);
             FilmRecommendations.Remove(filmID);
             if (FilmRecommendations.Count < 6)
-                IncRecommendedFilmsAsync();
+                IncRecommendedFilmsAsync().ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); ;
             Users.Unload();
         }
 
@@ -393,6 +404,7 @@ namespace Freetime_Planner
                 return false;
             else
             {
+                AddActorPostersAsync(obj).ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); ;
                 actors = obj.Actors;
                 return true;
             }
@@ -409,18 +421,18 @@ namespace Freetime_Planner
             else
             {
                 Bot.SendMessage(this, "Результаты поиска");
-                foreach(var t in obj.actors)
+                foreach (var t in obj.actors)
                 {
-                     Bot.SendMessage(this, $"{t.Item1} ({t.Item2})",t.Item4,null,new List<MediaAttachment> {t.Item3});
+                    Bot.SendMessage(this, $"{t.Item1} ({t.Item2})", t.Item4, null, new List<MediaAttachment> { t.Item3 });
                 }
             }
         }
         /// <summary>
         /// Добавляет популярные фильмы в список рекомендуемых фильмов асинхронно
         /// </summary>
-        private async void IncRecommendedFilmsAsync()
+        private async Task IncRecommendedFilmsAsync()
         {
-            await Task.Run(() => IncRecommendedFilms());
+            Task.Run(() => IncRecommendedFilms());
         }
         /// <summary>
         /// Добавляет популярные фильмы в список рекомендуемых фильмов синхронно
@@ -438,9 +450,9 @@ namespace Freetime_Planner
         /// Асинхронно вызывает функцию UpdateFilmRecommendations
         /// </summary>
         /// <param name="nameEn"></param>
-        private async void UpdateFilmRecommendationsAsync(string nameEn)
+        private async Task UpdateFilmRecommendationsAsync(string nameEn)
         {
-            await Task.Run(() => UpdateFilmRecommendations(nameEn));
+            Task.Run(() => UpdateFilmRecommendations(nameEn));
         }
 
         /// <summary>
@@ -464,7 +476,7 @@ namespace Freetime_Planner
             IRestResponse response1 = client1.Execute(request1);
             MDBResults deserialized1;
             try { deserialized1 = JsonConvert.DeserializeObject<MDBResults>(response1.Content); }
-            catch(Exception) { return; }
+            catch (Exception) { return; }
             if (deserialized1 == null || deserialized1.total_pages == 0)
                 return;
             string sid = deserialized1.results.First().id.ToString();
@@ -476,7 +488,7 @@ namespace Freetime_Planner
             IRestResponse response2 = client2.Execute(request2);
             MDBResults deserialized2;
             try { deserialized2 = JsonConvert.DeserializeObject<MDBResults>(response2.Content); }
-            catch(Exception) { return; }
+            catch (Exception) { return; }
             if (deserialized2 == null || deserialized2.total_pages == 0)
                 return;
             string[] names = deserialized2.results.Select(film => film.title).ToArray();
@@ -492,7 +504,7 @@ namespace Freetime_Planner
                 IRestResponse KPresponse1 = KPclient1.Execute(KPrequest1);
                 FilmResults.Results deserialized;
                 try { deserialized = JsonConvert.DeserializeObject<FilmResults.Results>(KPresponse1.Content); }
-                catch(Exception) { deserialized = null; }
+                catch (Exception) { deserialized = null; }
 
                 //проверка успешности десериализации
                 if (deserialized != null)
@@ -518,13 +530,13 @@ namespace Freetime_Planner
                         IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
                         Film.FilmObject film;
                         try { film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content); }
-                        catch(Exception) { film = null; }
+                        catch (Exception) { film = null; }
                         if (film == null)
                             continue;
                         film.Priority = 2;
-                        
-                        film.data.VKPhotoID   = Attachments.RecommendedFilmPosterID(film, out var full_photo_ID);
-                        film.data.VKPhotoID_2 = full_photo_ID ;
+
+                        film.data.VKPhotoID = Attachments.RecommendedFilmPosterID(film, out var full_photo_ID);
+                        film.data.VKPhotoID_2 = full_photo_ID;
                         //проверка валидности изображения
                         if (film.data.VKPhotoID != null && film.data.VKPhotoID_2 != null)
                         {
@@ -539,9 +551,9 @@ namespace Freetime_Planner
             Users.Unload();
         }
 
-        private async void UpdateFilmRandomAsync()
+        private async Task UpdateFilmRandomAsync()
         {
-            await Task.Run(() => UpdateFilmRandom());
+            Task.Run(() => UpdateFilmRandom());
         }
 
         /// <summary>
@@ -566,22 +578,22 @@ namespace Freetime_Planner
                     request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
                 else
                 {*/
-                    int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 10);
-                    int filmYearUpperLine = random.Next(filmYearBottomLine + 10, DateTime.Now.Year + 1);
-                    request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
-                    request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 10);
+                int filmYearUpperLine = random.Next(filmYearBottomLine + 10, DateTime.Now.Year + 1);
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
                 //}
                 IRestResponse response = client.Execute(request);
                 RandomFilms.Results results;
                 try { results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content); }
-                catch(Exception) { results = null; }
+                catch (Exception) { results = null; }
                 if (results == null || results.films.Count == 0)
                     continue;
                 for (int i = 0; i < results.films.Count; ++i)
                 {
                     var t = results.films[i];
                     string photoID2;
-                    t.VKPhotoID = Attachments.RandomFilmPosterID(t,out photoID2);
+                    t.VKPhotoID = Attachments.RandomFilmPosterID(t, out photoID2);
                     t.VKPhotoID_2 = photoID2;
                     if (t.VKPhotoID == null || t.VKPhotoID_2 == null)
                         continue;
@@ -594,9 +606,9 @@ namespace Freetime_Planner
             }
         }
 
-        private async void UpdateGenreFilmsAsync(string genre)
+        private async Task UpdateGenreFilmsAsync(string genre)
         {
-            await Task.Run(() => UpdateGenreFilms(genre));
+            Task.Run(() => UpdateGenreFilms(genre));
         }
 
         private void UpdateGenreFilms(string genre)
@@ -633,107 +645,167 @@ namespace Freetime_Planner
                     l.Add(t);
                 }
                 GenreFilms[genre] = l;
+                Users.Unload();
                 return;
             }
         }
 
-        public async void AddFilmSoundtrackAsync(string name, string addition)
+        public async Task AddFilmSoundtrackAsync(string name, string addition)
         {
-            await Task.Run(() => AddFilmSoundtrack(name, addition));
+            Console.WriteLine($"AddFilmSoundtrackAsync начало: {Bot.timer.ElapsedMilliseconds}");
+            Task.Run(() => AddFilmSoundtrack(name, addition));
+            Console.WriteLine($"AddFilmSoundtrackAsync конец: {Bot.timer.ElapsedMilliseconds}");
         }
 
         public void AddFilmSoundtrack(string name, string addition)
         {
             string[] song_names;
-            var res = new FilmSountracks();
+            FilmTracks[name] = new FilmSountracks();
             try
             {
                 song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
                 //var tracks = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{name} {addition}")[0].Id).Volumes[0];
                 //song_names = tracks.Take(Math.Min(6, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
                 var audios = new List<Audio>();
-                for (int i = 0; i < song_names.Length; ++i)
+                var l = new List<Task>();
+                foreach(var song in song_names)
                 {
-                    var collection = Bot.private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
+                    var t = Task.Run(() =>
                     {
-                        Autocomplete = true,
-                        Query = song_names[i]
+                        var collection = Bot.private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
+                        {
+                            Autocomplete = true,
+                            Query = song
+                        });
+                        if (collection.Count > 0)
+                        {
+                            audios.Add(collection[0]);
+                        }
                     });
-                    if (collection.Count > 0)
-                    {
-                        audios.Add(collection[0]);
-                    }
+                    l.Add(t);
                 }
-                res.Update(audios);
-                FilmTracks[name] = res;
-                if (res.Tracks.Count == 0)
-                    FilmTracks[name].IsEmpty = true;
+                Task.WaitAll(l.ToArray());
+                FilmTracks[name].Update(audios);
                 Users.Unload();
             }
             catch (Exception)
             {
-                FilmTracks[name] = res;
                 FilmTracks[name].IsLoading = false;
                 return;
             }
         }
 
-        public async void AddFilmActorsAsync(string filmID)
+        public async Task AddFilmActorsAsync(string filmID)
         {
-            await Task.Run(() => AddFilmActors(filmID));
+            Console.WriteLine($"AddFilmActorsAsync начало: {Bot.timer.ElapsedMilliseconds}");
+            Task.Run(() => AddFilmActors(filmID));
+            Console.WriteLine($"AddFilmActorsAsync конец: {Bot.timer.ElapsedMilliseconds}");
         }
 
         public void AddFilmActors(string filmID)
         {
             var proverka = Film.Methods.Actors(filmID);
-            var res = new ActorsTemplate();
+            FilmActors[filmID] = new ActorsTemplate();
             if (proverka != null)
             {
-                res.Update(Keyboards.ActorResults(proverka.Take(Math.Min(5, proverka.Count))));
-                FilmActors[filmID] = res;
+                FilmActors[filmID].Update(Keyboards.ActorResults(FilmActors[filmID], proverka.Take(Math.Min(5, proverka.Count))));
             }
             else
             {
-                FilmActors[filmID] = res;
                 FilmActors[filmID].IsLoading = false;
             }
+            Users.Unload();
         }
+
+        public async Task AddSearchPosterAsync(FilmResults.Film film)
+        {
+            Task.Run(() =>
+            {
+                Console.WriteLine($"Большой постер {film.filmId}...");
+                Posters[film.filmId.ToString()] = (null, DateTime.Now);
+                Posters[film.filmId.ToString()] = (Attachments.FullResultedFilmPosterID(film, out var photo), DateTime.Now);
+                Console.WriteLine($"Я сделаль {film.filmId}!");
+            });
+            Users.Unload();
+        }
+
+        public async Task AddSearchPosterAsync(TVResults.Film film)
+        {
+            Task.Run(() =>
+            {
+                Console.WriteLine($"Большой постер {film.filmId}...");
+                Posters[film.filmId.ToString()] = (null, DateTime.Now);
+                Posters[film.filmId.ToString()] = (Attachments.FullResultedTVPosterID(film, out var photo), DateTime.Now);
+                Console.WriteLine($"Я сделаль {film.filmId}!");
+            });
+            Users.Unload();
+        }
+
+        public async Task AddActorPostersAsync(ActorsTemplate actors)
+        {
+            Task.Run(() =>
+            {
+                var l = new List<Task>();
+                foreach(var actor in actors.ActorsIDs)
+                {
+                    var t = Task.Run(() =>
+                    {
+                        Posters[actor.Key] = (null, DateTime.Now);
+                        Posters[actor.Key] = (Attachments.FullActorPosterID(actor.Value, actor.Key, out var photo), DateTime.Now);
+                    });
+                    l.Add(t);
+                }
+                Task.WaitAll(l.ToArray());
+            });
+            Users.Unload();
+        }
+
         //-----------------------------------not  template-------------------------------
 
-        public async void MessageAddFilmActorsAsync(string filmID)
+        public async Task MessageAddFilmActorsAsync(string filmID)
         {
-            await Task.Run(() => MessageAddFilmActors(filmID));
+            Task.Run(() => MessageAddFilmActors(filmID));
         }
 
         public void MessageAddFilmActors(string filmID)
         {
             var proverka = Film.Methods.Actors(filmID);
-            var res = new ActorsTemplate();
+            FilmActors[filmID] = new ActorsTemplate();
             var res1 = new List<(string, string, Photo,MessageKeyboard)>();
-
+            var l = new List<Task>();
             if (proverka != null)
             {
-                Parallel.ForEach(proverka.Take(Math.Min(5, proverka.Count)), (x) =>
+                foreach (var x in proverka.Take(Math.Min(5, proverka.Count)))
                 {
-                    string name;
-                    if (x.nameRu != null && x.nameRu != "")
-                        name = x.nameRu;
-                    else name = x.nameEn;
-                    if (x.description == null || x.description == string.Empty)
-                        x.description = "Безымянный";
-                    var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
-                    button.AddButton("Узнать больше", $"f;;;{x.staffId};;;", Positive, "text");
-                    button.SetInline();
-                    res1.Add((name, x.description, Attachments.PosterObject(this, x.posterUrl, x.staffId.ToString()), button.Build()));
-                });
-                res.Update(res1);
-                FilmActors[filmID] = res;
+                    var t = Task.Run(() =>
+                    {
+                        Posters[x.staffId.ToString()] = (null, DateTime.Now);
+                        string name;
+                        if (x.nameRu != null && x.nameRu != "")
+                            name = x.nameRu;
+                        else name = x.nameEn;
+                        if (x.description == null || x.description == string.Empty)
+                            x.description = "Безымянный";
+                        var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+                        button.AddButton("Узнать больше", $"f;;;{x.staffId};;;", Positive, "text");
+                        button.SetInline();
+                        var s = Attachments.FullActorPosterID(x.posterUrl, x.staffId.ToString(), out var p);
+                        if (s != null)
+                        {
+                            res1.Add((name, x.description, p, button.Build()));
+                            Posters[x.staffId.ToString()] = (s, DateTime.Now);
+                        }
+                    });
+                    l.Add(t);
+                }
+                Task.WaitAll(l.ToArray());
+                FilmActors[filmID].Update(res1);
             }
             else
             {
-                FilmActors[filmID] = res;
                 FilmActors[filmID].IsLoading = false;
             }
+            Users.Unload();
         }
         //--------------Пользовательские методы для сериалов--------------
 
@@ -752,19 +824,19 @@ namespace Freetime_Planner
             if (!RandomTVIsUpdating)
             {
                 RandomTVIsUpdating = true;
-                UpdateTVRandomAsync();
+                UpdateTVRandomAsync().ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); ;
             }
             if (TVRandomDict == null || TVRandomDict.Count == 0)
                 TVRandomDict = TV.RandomTV;
             //Console.WriteLine(string.Join("\n", TVRandomDict.Values.Select(f => f.nameRu)));
-            return Keyboards.RandomTVResults(TVRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+            return Keyboards.RandomTVResults(this, TVRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
         }
         public void RandomTVMessage(User user)
         {
             if (!RandomTVIsUpdating)
             {
                 RandomTVIsUpdating = true;
-                UpdateTVRandomAsync();
+                UpdateTVRandomAsync().ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); ;
             }
             if (TVRandomDict == null || TVRandomDict.Count == 0)
                 TVRandomDict = TV.RandomTV;
@@ -774,13 +846,13 @@ namespace Freetime_Planner
 
         public MessageTemplate GetGenreTV(string genre)
         {
-            UpdateGenreTVAsync(genre);
-            return Keyboards.RandomTVResults(GenreTV[genre].Shuffle().Take(Math.Min(3, GenreTV[genre].Count)));
+            UpdateGenreTVAsync(genre).ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); ;
+            return Keyboards.RandomTVResults(this, GenreTV[genre].Shuffle().Take(Math.Min(3, GenreTV[genre].Count)));
         }
 
         public void SendGenreTV(string genre)
         {
-            UpdateGenreTVAsync(genre);
+            UpdateGenreTVAsync(genre).ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); ;
             Keyboards.RandomTVResultsMessage(this, GenreTV[genre].Shuffle().Take(Math.Min(3, GenreTV[genre].Count)));
         }
 
@@ -798,7 +870,7 @@ namespace Freetime_Planner
                 return false;
             else
                 PlannedTV.Add(new TV.TVObject(nameRu, nameEn, int.Parse(filmID)));
-            UpdateTVRecommendationsAsync(nameEn);
+            UpdateTVRecommendationsAsync(nameEn).ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted); ;
             Users.Unload();
             return true;
         }
@@ -812,7 +884,7 @@ namespace Freetime_Planner
 
         public void LikeTV(string nameEn)
         {
-            UpdateTVRecommendationsAsync(nameEn);
+            UpdateTVRecommendationsAsync(nameEn).ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
             //return;
         }
 
@@ -821,7 +893,7 @@ namespace Freetime_Planner
             HiddenTV.Add(TVID);
             TVRecommendations.Remove(TVID);
             if (TVRecommendations.Count < 6)
-                IncRecommendedTVAsync();
+                IncRecommendedTVAsync().ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
             Users.Unload();
         }
 
@@ -855,6 +927,7 @@ namespace Freetime_Planner
                 return false;
             else
             {
+                AddActorPostersAsync(obj).ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
                 actors = obj.Actors;
                 return true;
             }
@@ -891,9 +964,9 @@ namespace Freetime_Planner
         }
         */
 
-        private async void UpdateTVRecommendationsAsync(string nameEn)
+        private async Task UpdateTVRecommendationsAsync(string nameEn)
         {
-            await Task.Run(() => UpdateTVRecommendations(nameEn));
+            Task.Run(() => UpdateTVRecommendations(nameEn));
         }
 
         private void UpdateTVRecommendations(string nameEn)
@@ -990,9 +1063,9 @@ namespace Freetime_Planner
         /// <summary>
         /// Добавляет популярные сериалы в список рекомендуемых сериалов асинхронно
         /// </summary>
-        private async void IncRecommendedTVAsync()
+        private async Task IncRecommendedTVAsync()
         {
-            await Task.Run(() => IncRecommendedTV());
+            Task.Run(() => IncRecommendedTV());
         }
         /// <summary>
         /// Добавляет популярные сериалы в список рекомендуемых сериалов синхронно
@@ -1006,9 +1079,9 @@ namespace Freetime_Planner
             Users.Unload();
         }
 
-        private async void UpdateTVRandomAsync()
+        private async Task UpdateTVRandomAsync()
         {
-            await Task.Run(() => UpdateTVRandom());
+            Task.Run(() => UpdateTVRandom());
         }
 
         /// <summary>
@@ -1060,9 +1133,9 @@ namespace Freetime_Planner
             }
         }
 
-        private async void UpdateGenreTVAsync(string genre)
+        private async Task UpdateGenreTVAsync(string genre)
         {
-            await Task.Run(() => UpdateGenreTV(genre));
+            Task.Run(() => UpdateGenreTV(genre));
         }
 
         private void UpdateGenreTV(string genre)
@@ -1099,106 +1172,118 @@ namespace Freetime_Planner
                     l.Add(t);
                 }
                 GenreTV[genre] = l;
+                Users.Unload();
                 return;
             }
         }
 
-        public async void AddTVSoundtrackAsync(string name, string addition)
+        public async Task AddTVSoundtrackAsync(string name, string addition)
         {
-            await Task.Run(() => AddTVSoundtrack(name, addition));
+            Task.Run(() => AddTVSoundtrack(name, addition));
         }
 
         public void AddTVSoundtrack(string name, string addition)
         {
             string[] song_names;
-            var res = new FilmSountracks();
+            TVTracks[name] = new FilmSountracks();
             try
             {
                 song_names = SpotifyTracks.GetTracks(SpotifyPlaylists.SearchPlaylist($"{name} {addition}"), "6").ToArray();
                 //var tracks = Bot.yandex_api.GetAlbum(Bot.yandex_api.SearchAlbums($"{name} {addition}")[0].Id).Volumes[0];
                 //song_names = tracks.Take(Math.Min(6, tracks.Count)).Select(n => $"{n.Title} {string.Join(' ', n.Artists.Select(a => a.Name))}").ToArray();
                 var audios = new List<Audio>();
-                for (int i = 0; i < song_names.Length; ++i)
+                var l = new List<Task>();
+                foreach(var song in song_names)
                 {
-                    var collection = Bot.private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
+                    var t = Task.Run(() =>
                     {
-                        Autocomplete = true,
-                        Query = song_names[i]
+                        var collection = Bot.private_vkapi.Audio.Search(new VkNet.Model.RequestParams.AudioSearchParams
+                        {
+                            Autocomplete = true,
+                            Query = song
+                        });
+                        if (collection.Count > 0)
+                        {
+                            audios.Add(collection[0]);
+                        }
                     });
-                    if (collection.Count > 0)
-                    {
-                        audios.Add(collection[0]);
-                    }
+                    l.Add(t);
                 }
-                res.Update(audios);
-                TVTracks[name] = res;
-                if (res.Tracks.Count == 0)
-                    TVTracks[name].IsEmpty = true;
+                Task.WaitAll(l.ToArray());
+                TVTracks[name].Update(audios);
                 Users.Unload();
             }
             catch (Exception)
             {
-                TVTracks[name] = res;
                 TVTracks[name].IsLoading = false;
                 return;
             }
         }
 
-        public async void AddTVActorsAsync(string TVID)
+        public async Task AddTVActorsAsync(string TVID)
         {
-            await Task.Run(() => AddTVActors(TVID));
+            Task.Run(() => AddTVActors(TVID));
         }
 
         public void AddTVActors(string TVID)
         {
             var proverka = Film.Methods.Actors(TVID);
-            var res = new ActorsTemplate();
+            TVActors[TVID] = new ActorsTemplate();
             if (proverka != null)
             {
-                res.Update(Keyboards.ActorResultsTV(proverka.Take(Math.Min(5, proverka.Count))));
-                TVActors[TVID] = res;
+                TVActors[TVID].Update(Keyboards.ActorResultsTV(TVActors[TVID], proverka.Take(Math.Min(5, proverka.Count))));
             }
             else
             {
-                TVActors[TVID] = res;
                 TVActors[TVID].IsLoading = false;
             }
+            Users.Unload();
         }
 
-        public async void MessageAddTVActorsAsync(string TVID)
+        public async Task MessageAddTVActorsAsync(string TVID)
         {
-            await Task.Run(() => MessageAddFilmActors(TVID));
+            Task.Run(() => MessageAddFilmActors(TVID));
         }
 
         public void MessageAddTVActors(string TVID)
         {
             var proverka = Film.Methods.Actors(TVID);
-            var res = new ActorsTemplate();
+            TVActors[TVID] = new ActorsTemplate();
             var res1 = new List<(string, string, Photo, MessageKeyboard)>();
-
+            var l = new List<Task>();
             if (proverka != null)
             {
-                Parallel.ForEach(proverka.Take(Math.Min(5, proverka.Count)), (x) =>
+                foreach (var x in proverka.Take(Math.Min(5, proverka.Count)))
                 {
-                    string name;
-                    if (x.nameRu != null && x.nameRu != "")
-                        name = x.nameRu;
-                    else name = x.nameEn;
-                    if (x.description == null || x.description == string.Empty)
-                        x.description = "Безымянный";
-                    var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
-                    button.AddButton("Узнать больше", $"t;;;{x.staffId};;;", Positive, "text");
-                    button.SetInline();
-                    res1.Add((name, x.description, Attachments.PosterObject(this, x.posterUrl, x.staffId.ToString()), button.Build()));
-                });
-                res.Update(res1);
-                TVActors[TVID] = res;
+                    var t = Task.Run(() =>
+                    {
+                        Posters[x.staffId.ToString()] = (null, DateTime.Now);
+                        string name;
+                        if (x.nameRu != null && x.nameRu != "")
+                            name = x.nameRu;
+                        else name = x.nameEn;
+                        if (x.description == null || x.description == string.Empty)
+                            x.description = "Безымянный";
+                        var button = new VkNet.Model.Keyboard.KeyboardBuilder(false);
+                        button.AddButton("Узнать больше", $"t;;;{x.staffId};;;", Positive, "text");
+                        button.SetInline();
+                        var s = Attachments.FullActorPosterID(x.posterUrl, x.staffId.ToString(), out var p);
+                        if (s != null)
+                        {
+                            res1.Add((name, x.description, p, button.Build()));
+                            Posters[x.staffId.ToString()] = (s, DateTime.Now);
+                        }
+                    });
+                    l.Add(t);
+                }
+                Task.WaitAll(l.ToArray());
+                TVActors[TVID].Update(res1);
             }
             else
             {
-                TVActors[TVID] = res;
                 TVActors[TVID].IsLoading = false;
             }
+            Users.Unload();
         }
 
 

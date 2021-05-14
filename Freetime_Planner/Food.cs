@@ -56,7 +56,7 @@ namespace Freetime_Planner
             YouTube.YouTubeResults results;
             try { results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content); }
             catch(Exception) { return null; }
-            if (results == null || results.items.Count == 0)
+            if (results == null || results.items == null || results.items.Count == 0)
                 return null;
 
             var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
@@ -89,7 +89,7 @@ namespace Freetime_Planner
             YouTube.YouTubeResults results;
             try { results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content); }
             catch (Exception) { return null; }
-            if (results == null || results.items.Count == 0)
+            if (results == null || results.items == null || results.items.Count == 0)
                 return null;
 
             var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
@@ -122,7 +122,7 @@ namespace Freetime_Planner
             YouTube.YouTubeResults results;
             try { results = JsonConvert.DeserializeObject<YouTube.YouTubeResults>(response.Content); }
             catch (Exception) { return null; }
-            if (results == null || results.items.Count == 0)
+            if (results == null || results.items == null || results.items.Count == 0)
                 return null;
 
             var video = private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
