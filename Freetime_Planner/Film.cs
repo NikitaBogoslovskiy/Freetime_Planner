@@ -20,6 +20,7 @@ using System.Net;
 using System.Security.Claims;
 using static System.Console;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Threading;
 
 namespace Freetime_Planner
 {
@@ -537,6 +538,7 @@ namespace Freetime_Planner
 
             public static void GetTrailer(int filmID, ref Video trailer)
             {
+                var wc = new WebClient();
                 var client = new RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{filmID}/videos");
                 var request = new RestRequest(Method.GET);
                 request.AddHeader("X-API-KEY", Bot._kp_key);
@@ -553,14 +555,16 @@ namespace Freetime_Planner
                     trailer = null;
                     return;
                 }
+
                 Random random = new Random();
+                int rnd = random.Next(0, trailers.Count);
                 trailer = Bot.private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
                 {
-                    Link = trailers[random.Next(0, trailers.Count)].url
+                    Link = trailers[rnd].url
                 });
 
-                var wc = new WebClient();
                 wc.DownloadString(trailer.UploadUrl);
+                Console.WriteLine(trailers[rnd].url);
             }
         }
 
@@ -675,7 +679,13 @@ namespace Freetime_Planner
 
                
                 var poster = Attachments.PosterObject(user, film.data.posterUrl, film.data.filmId.ToString());
+
                 t.Wait();
+                //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                Console.Write("Duration: ");
+                Console.WriteLine(trailer.Duration);
+                //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
                 attachments = new List<MediaAttachment> { poster };
                 if (trailer != null)
                     attachments.Add(trailer);
