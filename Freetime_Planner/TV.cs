@@ -542,7 +542,11 @@ namespace Freetime_Planner
                 attachments = new List<MediaAttachment> { poster };
                 if (trailer != null)
                     attachments.Add(trailer);
-
+                
+                if (film.data.nameEn != null && film.data.nameEn != string.Empty)
+                    user.AddTVSoundtrackAsync(film.data.nameEn, "ost");
+                else
+                    user.AddTVSoundtrackAsync(film.data.nameRu, "саундтрек");
                 keyboard = Keyboards.TVSearch(film.data.nameRu, film.data.nameEn, film.data.filmId.ToString(), string.Join("*", film.data.genres.Select(g => g.genre)), film.data.premiereRu);
                 return FullInfo(film);
             }

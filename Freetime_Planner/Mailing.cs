@@ -72,7 +72,7 @@ namespace Freetime_Planner
                     if (film.data.type == "FILM")
                     {
                         string fname, addition;
-                        if (film.data.nameEn != null)
+                        if (film.data.nameEn != null && film.data.nameEn != string.Empty)
                         {
                             fname = film.data.nameEn;
                             addition = "ost";
@@ -88,7 +88,7 @@ namespace Freetime_Planner
                     else if (film.data.type == "TV_SHOW")
                     {
                         string fname, addition;
-                        if (film.data.nameEn != null)
+                        if (film.data.nameEn != null && film.data.nameEn != string.Empty)
                         {
                             fname = film.data.nameEn;
                             addition = "ost";
