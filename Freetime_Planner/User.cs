@@ -11,6 +11,7 @@ using RestSharp;
 using VkNet.Model.Attachments;
 using VkNet.Model.Keyboard;
 using static VkNet.Enums.SafetyEnums.KeyboardButtonColor;
+using System.Net;
 
 namespace Freetime_Planner
 {
@@ -46,7 +47,7 @@ namespace Freetime_Planner
         /// </summary>
         public Dictionary<int, Film.FilmObject> FilmRecommendations { get; set; }
 
-        public  int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
+        public int[] PopularGenres = new int[] { 1, 3, 6, 7, 10, 13, 16, 17, 19, 22, 24, 27, 28, 29, 31 };
         public Dictionary<int, RandomFilms.Film> FilmRandomDict { get; set; }
         public bool RandomFilmsIsUpdating { get; set; }
         public Dictionary<int, RandomTV.Film> TVRandomDict { get; set; }
@@ -74,7 +75,7 @@ namespace Freetime_Planner
         public Queue<Mailing.MailObject> MailObjects { get; set; }
 
         public DateTime LastPlannedFilmsUpdate { get; set; }
-        
+
         public Dictionary<string, FilmSountracks> FilmTracks { get; set; }
         public Dictionary<string, FilmSountracks> TVTracks { get; set; }
         public Dictionary<string, string> LastFood { get; set; }
@@ -210,7 +211,7 @@ namespace Freetime_Planner
 
         public void GetFilmRecommendationsMessage(User user)
         {
-            
+
             Keyboards.FilmMyRecommendationsMessage(user, FilmRecommendations.Shuffle().Take(5).Select(kv => kv.Value));
 
         }
@@ -219,7 +220,7 @@ namespace Freetime_Planner
         /// </summary>
         /// <returns></returns>
         public MessageTemplate RandomFilms()
-        { 
+        {
             if (!RandomFilmsIsUpdating)
             {
                 RandomFilmsIsUpdating = true;
@@ -239,7 +240,7 @@ namespace Freetime_Planner
             }
             if (FilmRandomDict == null || FilmRandomDict.Count == 0)
                 FilmRandomDict = Film.RandomFilms;
-            Keyboards.FilmMyRandomMessage(user,FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+            Keyboards.FilmMyRandomMessage(user, FilmRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
         }
 
         public MessageTemplate GetGenreFilms(string genre)
@@ -330,7 +331,7 @@ namespace Freetime_Planner
         public void RemovePlannedFilm(string filmID)
         {
             var ind = PlannedFilms[0].FindIndex(film => film.data.filmId == int.Parse(filmID));
-            if (ind!= -1)
+            if (ind != -1)
             {
                 PlannedFilms[0].RemoveAt(ind);
                 return;
@@ -409,9 +410,9 @@ namespace Freetime_Planner
             else
             {
                 Bot.SendMessage(this, "Результаты поиска");
-                foreach(var t in obj.actors)
+                foreach (var t in obj.actors)
                 {
-                     Bot.SendMessage(this, $"{t.Item1} ({t.Item2})",t.Item4,null,new List<MediaAttachment> {t.Item3});
+                    Bot.SendMessage(this, $"{t.Item1} ({t.Item2})", t.Item4, null, new List<MediaAttachment> { t.Item3 });
                 }
             }
         }
@@ -432,6 +433,39 @@ namespace Freetime_Planner
                 FilmRecommendations.Add(kv.Key, kv.Value);
             });
             Users.Unload();
+        }
+
+        /// <summary>
+        /// Ищет в добавляет трейлер к фильму
+        /// </summary>
+        /// <param name="ID"></param>
+        /// <param name="trailer"></param>
+        private void GetTrailer(int ID, ref Video trailer)
+        {
+            var client = new RestClient($"https://kinopoiskapiunofficial.tech/api/v2.1/films/{ID}/videos");
+            var request = new RestRequest(Method.GET);
+            request.AddHeader("X-API-KEY", Bot._kp_key);
+            IRestResponse response = client.Execute(request);
+            List<Trailer> trailers;
+            try { trailers = JsonConvert.DeserializeObject<MovieVideos>(response.Content).trailers.Where(t => t.site.ToLower() == "youtube").ToList(); }
+            catch (Exception)
+            {
+                trailer = null;
+                return;
+            }
+            if ((trailers == null) || (trailers.Count() == 0))
+            {
+                trailer = null;
+                return;
+            }
+            Random random = new Random();
+            trailer = Bot.private_vkapi.Video.Save(new VkNet.Model.RequestParams.VideoSaveParams
+            {
+                Link = trailers[random.Next(0, trailers.Count)].url
+            });
+
+            var wc = new WebClient();
+            wc.DownloadString(trailer.UploadUrl);
         }
 
         /// <summary>
@@ -464,7 +498,7 @@ namespace Freetime_Planner
             IRestResponse response1 = client1.Execute(request1);
             MDBResults deserialized1;
             try { deserialized1 = JsonConvert.DeserializeObject<MDBResults>(response1.Content); }
-            catch(Exception) { return; }
+            catch (Exception) { return; }
             if (deserialized1 == null || deserialized1.total_pages == 0)
                 return;
             string sid = deserialized1.results.First().id.ToString();
@@ -476,7 +510,7 @@ namespace Freetime_Planner
             IRestResponse response2 = client2.Execute(request2);
             MDBResults deserialized2;
             try { deserialized2 = JsonConvert.DeserializeObject<MDBResults>(response2.Content); }
-            catch(Exception) { return; }
+            catch (Exception) { return; }
             if (deserialized2 == null || deserialized2.total_pages == 0)
                 return;
             string[] names = deserialized2.results.Select(film => film.title).ToArray();
@@ -492,7 +526,7 @@ namespace Freetime_Planner
                 IRestResponse KPresponse1 = KPclient1.Execute(KPrequest1);
                 FilmResults.Results deserialized;
                 try { deserialized = JsonConvert.DeserializeObject<FilmResults.Results>(KPresponse1.Content); }
-                catch(Exception) { deserialized = null; }
+                catch (Exception) { deserialized = null; }
 
                 //проверка успешности десериализации
                 if (deserialized != null)
@@ -518,16 +552,22 @@ namespace Freetime_Planner
                         IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
                         Film.FilmObject film;
                         try { film = JsonConvert.DeserializeObject<Film.FilmObject>(KPresponse2.Content); }
-                        catch(Exception) { film = null; }
+                        catch (Exception) { film = null; }
                         if (film == null)
                             continue;
                         film.Priority = 2;
-                        
-                        film.data.VKPhotoID   = Attachments.RecommendedFilmPosterID(film, out var full_photo_ID);
-                        film.data.VKPhotoID_2 = full_photo_ID ;
+
+                        //Video trailer = null;
+
+                        film.data.VKPhotoID = Attachments.RecommendedFilmPosterID(film, out var full_photo_ID);
+                        film.data.VKPhotoID_2 = full_photo_ID;
+
                         //проверка валидности изображения
                         if (film.data.VKPhotoID != null && film.data.VKPhotoID_2 != null)
                         {
+                            //GetTrailer(film.data.filmId, ref trailer);
+                            //film.TrailerInfo = trailer;
+
                             new_array[id] = film;
                             //добавляем только требуемое количество
                             if (new_array.Count >= required_count)
@@ -566,22 +606,22 @@ namespace Freetime_Planner
                     request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
                 else
                 {*/
-                    int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 10);
-                    int filmYearUpperLine = random.Next(filmYearBottomLine + 10, DateTime.Now.Year + 1);
-                    request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
-                    request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 10);
+                int filmYearUpperLine = random.Next(filmYearBottomLine + 10, DateTime.Now.Year + 1);
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
                 //}
                 IRestResponse response = client.Execute(request);
                 RandomFilms.Results results;
                 try { results = JsonConvert.DeserializeObject<RandomFilms.Results>(response.Content); }
-                catch(Exception) { results = null; }
+                catch (Exception) { results = null; }
                 if (results == null || results.films.Count == 0)
                     continue;
                 for (int i = 0; i < results.films.Count; ++i)
                 {
                     var t = results.films[i];
                     string photoID2;
-                    t.VKPhotoID = Attachments.RandomFilmPosterID(t,out photoID2);
+                    t.VKPhotoID = Attachments.RandomFilmPosterID(t, out photoID2);
                     t.VKPhotoID_2 = photoID2;
                     if (t.VKPhotoID == null || t.VKPhotoID_2 == null)
                         continue;
@@ -709,7 +749,7 @@ namespace Freetime_Planner
         {
             var proverka = Film.Methods.Actors(filmID);
             var res = new ActorsTemplate();
-            var res1 = new List<(string, string, Photo,MessageKeyboard)>();
+            var res1 = new List<(string, string, Photo, MessageKeyboard)>();
 
             if (proverka != null)
             {
@@ -748,7 +788,7 @@ namespace Freetime_Planner
         }
 
         public MessageTemplate RandomTV()
-        { 
+        {
             if (!RandomTVIsUpdating)
             {
                 RandomTVIsUpdating = true;
@@ -769,7 +809,7 @@ namespace Freetime_Planner
             if (TVRandomDict == null || TVRandomDict.Count == 0)
                 TVRandomDict = TV.RandomTV;
             //Console.WriteLine(string.Join("\n", TVRandomDict.Values.Select(f => f.nameRu)));
-            Keyboards.RandomTVResultsMessage(user,TVRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
+            Keyboards.RandomTVResultsMessage(user, TVRandomDict.Shuffle().Take(3).Select(kv => kv.Value));
         }
 
         public MessageTemplate GetGenreTV(string genre)
@@ -913,7 +953,7 @@ namespace Freetime_Planner
             IRestResponse response1 = client1.Execute(request1);
             MDBResultsTV deserialized1;
             try { deserialized1 = JsonConvert.DeserializeObject<MDBResultsTV>(response1.Content); }
-            catch(Exception) { return; }
+            catch (Exception) { return; }
             if (deserialized1 == null || deserialized1.total_pages == 0)
                 return;
             string sid = deserialized1.results.First().id.ToString();
@@ -925,7 +965,7 @@ namespace Freetime_Planner
             IRestResponse response2 = client2.Execute(request2);
             MDBRecommendations deserialized2;
             try { deserialized2 = JsonConvert.DeserializeObject<MDBRecommendations>(response2.Content); }
-            catch(Exception) { return; }
+            catch (Exception) { return; }
             if (deserialized2 == null || deserialized2.total_pages == 0)
                 return;
             string[] names = deserialized2.results.Select(film => film.name).ToArray();
@@ -966,16 +1006,23 @@ namespace Freetime_Planner
                         IRestResponse KPresponse2 = KPclient2.Execute(KPrequest2);
                         TV.TVObject tv;
                         try { tv = JsonConvert.DeserializeObject<TV.TVObject>(KPresponse2.Content); }
-                        catch(Exception) { tv = null; }
+                        catch (Exception) { tv = null; }
                         if (tv == null)
                             continue;
                         tv.Priority = 2;
+
+                        //Video trailer = null;
+
                         string photoID2;
-                        tv.data.VKPhotoID = Attachments.RecommendedTVPosterID(tv,out photoID2);
+                        tv.data.VKPhotoID = Attachments.RecommendedTVPosterID(tv, out photoID2);
                         tv.data.VKPhotoID_2 = photoID2;
+
                         //проверка валидности изображения
                         if (tv.data.VKPhotoID != null && tv.data.VKPhotoID_2 != null)
                         {
+                            //GetTrailer(tv.data.filmId, ref trailer);
+                            //tv.TrailerInfo = trailer;
+
                             new_array[id] = tv;
                             //добавляем только требуемое количество
                             if (new_array.Count >= required_count)
@@ -1020,7 +1067,7 @@ namespace Freetime_Planner
             while (true)
             {
                 var dict = new Dictionary<int, RandomTV.Film>();
-                Random random = new Random();               
+                Random random = new Random();
                 string[] order = new string[] { "YEAR", "RATING", "NUM_VOTE" };
                 var client = new RestClient("https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-filters");
                 var request = new RestRequest(Method.GET);
@@ -1032,22 +1079,22 @@ namespace Freetime_Planner
                     request.AddQueryParameter("genre", PopularGenres[random.Next(0, PopularGenres.Length)].ToString());
                 else
                 {*/
-                    int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 10);
-                    int filmYearUpperLine = random.Next(filmYearBottomLine + 10, DateTime.Now.Year + 1);
-                    request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
-                    request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
+                int filmYearBottomLine = random.Next(1950, DateTime.Now.Year - 10);
+                int filmYearUpperLine = random.Next(filmYearBottomLine + 10, DateTime.Now.Year + 1);
+                request.AddQueryParameter("yearFrom", filmYearBottomLine.ToString());
+                request.AddQueryParameter("yearTo", filmYearUpperLine.ToString());
                 //}
                 IRestResponse response = client.Execute(request);
                 RandomTV.Results results;
                 try { results = JsonConvert.DeserializeObject<RandomTV.Results>(response.Content); }
-                catch(Exception) { results = null; }
+                catch (Exception) { results = null; }
                 if (results == null && results.films.Count == 0)
                     continue;
                 for (int i = 0; i < results.films.Count; ++i)
                 {
                     var t = results.films[i];
                     string photoID2;
-                    t.VKPhotoID = Attachments.RandomTVPosterID(t,out photoID2);
+                    t.VKPhotoID = Attachments.RandomTVPosterID(t, out photoID2);
                     t.VKPhotoID_2 = photoID2;
                     if (t.VKPhotoID == null || t.VKPhotoID_2 == null)
                         continue;
@@ -1233,7 +1280,7 @@ namespace Freetime_Planner
                 Match m = Regex.Match(date, @"(\d{4})-(\d{2})-(\d{2})");
                 return new DateTime(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value), int.Parse(m.Groups[3].Value));
             }
-            catch(Exception)
+            catch (Exception)
             {
                 return DateTime.MinValue;
             }
